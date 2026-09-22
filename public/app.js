@@ -592,6 +592,7 @@ function bindView() {
 
   document.querySelectorAll('[data-post]').forEach((btn) => {
     btn.addEventListener('click', async () => {
+      if (btn.dataset.confirm && !confirm(btn.dataset.confirm)) return;
       btn.disabled = true;
       try {
         const body = btn.dataset.body ? JSON.parse(btn.dataset.body) : {};
@@ -915,7 +916,10 @@ async function renderAdminDashboard() {
   ${pageHead(
     'Beranda',
     'Ringkasan operasional redistribusi surplus makanan',
-    `<button class="btn" data-post="/api/matches/run">${icon('sparkles', 15)} Jalankan Pencocokan AI</button>`
+    `<div class="row">
+      <button class="btn" data-post="/api/matches/run">${icon('sparkles', 15)} Jalankan Pencocokan AI</button>
+      <button class="btn btn-outline" data-post="/api/admin/clean" data-confirm="Hapus semua data transaksi (listing, kebutuhan, pencocokan, notifikasi)? Akun login tetap ada.">Bersihkan Data</button>
+    </div>`
   )}
   ${isEmpty ? `
   <div class="card">
@@ -924,7 +928,7 @@ async function renderAdminDashboard() {
       Alur peluncuran: daftarkan donor &amp; penerima, verifikasi pengguna, lalu jalankan pencocokan AI.
     </div>
     <div class="flow-list">
-      <div class="flow-item"><span class="flow-num">1</span><div><strong>Donor catat surplus</strong><span>Foto, porsi, masa simpan, koordinat</span></div></div>
+      <div class="flow-item"><span class="flow-num">1</span><div><strong>Donor catat surplus</strong><span>Foto, porsi, masa simpan, lokasi</span></div></div>
       <div class="flow-item"><span class="flow-num">2</span><div><strong>Penerima ajukan kebutuhan</strong><span>Jumlah porsi &amp; tingkat urgensi</span></div></div>
       <div class="flow-item"><span class="flow-num">3</span><div><strong>Admin verifikasi pengguna</strong><span>Aktifkan akun donor, penerima, kurir</span></div></div>
       <div class="flow-item"><span class="flow-num">4</span><div><strong>Jalankan pencocokan AI</strong><span>Skor multi-kriteria &lt; 3 detik + rute peta</span></div></div>
@@ -997,7 +1001,7 @@ async function renderAdminUsers() {
     <div class="table-wrap">
     <table>
       <thead>
-        <tr><th>Nama</th><th>Email</th><th>Peran</th><th>Status</th><th>Koordinat</th><th>Aksi</th></tr>
+        <tr><th>Nama</th><th>Email</th><th>Peran</th><th>Status</th><th>Lokasi</th><th>Aksi</th></tr>
       </thead>
       <tbody>
       ${users.map(u => `
@@ -1006,7 +1010,7 @@ async function renderAdminUsers() {
         <td>${esc(u.email)}</td>
         <td>${statusTag(u.role)}</td>
         <td>${statusTag(u.status)}</td>
-        <td class="muted">${u.lat ?? '—'}, ${u.lng ?? '—'}${u.capacity ? `<br>kap. ${u.capacity} porsi` : ''}</td>
+        <td class="muted">${esc(u.address || '—')}${u.capacity ? `<br>kap. ${u.capacity} porsi` : ''}</td>
         <td>
           <div class="row">
           ${u.status !== 'active' && u.role !== 'admin' ? `<button class="btn btn-sm" data-patch="/api/admin/users/${u.id}/status" data-body='{"status":"active"}'>Verifikasi</button>` : ''}
@@ -1427,7 +1431,7 @@ async function renderCourier() {
             <strong style="font-size:13px">${icon('route', 14)} Rute pengantaran</strong>
             <span class="muted">${route.total_distance_km} km · ± ${route.total_duration_min} menit</span>
           </div>
-          ${route.waypoints.map((w) => `<div class="route-step">${esc(w.label)} <span class="muted">(${w.lat}, ${w.lng})</span></div>`).join('')}
+          ${route.waypoints.map((w) => `<div class="route-step">${esc(w.label)}</div>`).join('')}
           <p class="muted" style="margin-top:6px">Tahap: ${route.legs.map((l) => `${l.from}→${l.to}: ${l.distance_km} km / ${l.duration_min} mnt`).join(' · ')}</p>
         </div>
         ` : ''}

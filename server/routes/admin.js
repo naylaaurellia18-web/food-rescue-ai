@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const { audit, notify } = require('../lib/audit');
 const { channelStatus } = require('../lib/channels');
+const { wipeTransactional } = require('../seed');
 const { authenticate, requireRole, requireActive } = require('../middleware');
 
 const router = express.Router();
@@ -131,6 +132,16 @@ router.delete('/users/:id', async (req, res, next) => {
     await audit(req.user.id, 'DELETE_USER', 'users', user.id, { email: user.email, role: user.role });
     await db.run('DELETE FROM users WHERE id = ?', [user.id]);
     res.json({ message: 'Pengguna dihapus' });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/clean', async (req, res, next) => {
+  try {
+    await wipeTransactional({ keepUsers: true });
+    await audit(req.user.id, 'CLEAN_DATA', 'system', null, { keep_users: true });
+    res.json({ message: 'Data transaksi dihapus. Akun login tetap ada.' });
   } catch (e) {
     next(e);
   }
