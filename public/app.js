@@ -267,13 +267,18 @@ function bindSopToggle(root = document) {
 }
 
 function logout() {
-  localStorage.removeItem('frai_token');
-  localStorage.removeItem('frai_user');
+  try {
+    localStorage.removeItem('frai_token');
+    localStorage.removeItem('frai_user');
+  } catch (_) {}
   token = '';
   me = null;
+  currentTab = '';
   destroyMap();
+  closeSidebar();
   render();
 }
+window.logout = logout;
 
 const NAV = {
   admin: [
@@ -331,22 +336,17 @@ function renderNav() {
           `<button type="button" class="${currentTab === id ? 'active' : ''}" data-tab="${id}">${icon(ic, 17)}<span>${label}</span></button>`
       )
       .join('');
-  nav.querySelectorAll('button[data-tab]').forEach((btn) => {
-    btn.addEventListener('click', () => setTab(btn.dataset.tab));
-  });
   const top = document.getElementById('topbarTitle');
   if (top) top.textContent = TAB_TITLES[currentTab] || 'Dashboard';
 }
 
 function setTab(t) {
-  if (currentTab === t) {
-    closeSidebar();
-    return;
-  }
+  if (!t) return;
+  const same = currentTab === t;
   currentTab = t;
   closeSidebar();
   renderNav();
-  destroyMap();
+  if (!same) destroyMap();
   renderView();
 }
 
@@ -1260,6 +1260,20 @@ document.addEventListener('click', async (ev) => {
 /* Sidebar toggle */
 document.getElementById('menuToggle')?.addEventListener('click', openSidebar);
 document.getElementById('sidebarOverlay')?.addEventListener('click', closeSidebar);
+
+/* Nav tabs (delegasi — selalu aktif walau renderNav ulang) */
+document.addEventListener('click', (ev) => {
+  const tabBtn = ev.target.closest('[data-tab]');
+  if (tabBtn && document.getElementById('nav')?.contains(tabBtn)) {
+    setTab(tabBtn.dataset.tab);
+  }
+});
+
+/* Logout */
+document.getElementById('topbarLogout')?.addEventListener('click', () => logout());
+document.getElementById('sidebar')?.addEventListener('click', (ev) => {
+  if (ev.target.closest('[data-logout]')) logout();
+});
 
 /* Theme toggle */
 document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);

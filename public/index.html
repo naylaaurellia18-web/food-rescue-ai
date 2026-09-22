@@ -44,7 +44,7 @@
             <div class="side-name" id="userName"></div>
             <div class="side-meta"><span class="pill" id="userRole"></span></div>
           </div>
-          <button class="icon-btn logout" type="button" onclick="logout()" title="Keluar" aria-label="Keluar">
+          <button class="icon-btn logout" type="button" data-logout title="Keluar" aria-label="Keluar">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
           </button>
         </div>
@@ -60,6 +60,9 @@
             <span class="env-chip">Production</span>
             <button class="icon-btn theme-toggle" id="themeToggle" type="button" title="Ganti tema" aria-label="Ganti tema terang/gelap"></button>
             <span class="topbar-user" id="topbarUser"></span>
+            <button class="icon-btn topbar-logout" id="topbarLogout" type="button" title="Keluar / ganti akun" aria-label="Keluar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+            </button>
           </div>
         </header>
 
