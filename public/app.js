@@ -47,19 +47,22 @@ function getTheme() {
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('frai_theme', theme);
-  const next = theme === 'dark' ? 'light' : 'dark';
-  const markup = icon(next === 'dark' ? 'moon' : 'sun', 17);
-  const label = next === 'dark' ? 'Mode gelap' : 'Mode terang';
-  const top = document.getElementById('themeToggle');
-  if (top) {
-    top.innerHTML = markup;
-    top.title = label;
-    top.setAttribute('aria-label', `Aktifkan ${label.toLowerCase()}`);
-  }
-  document.querySelectorAll('[data-theme-toggle]').forEach((btn) => {
-    btn.innerHTML = markup;
-    btn.title = label;
-    btn.setAttribute('aria-label', `Aktifkan ${label.toLowerCase()}`);
+  const isDark = theme === 'dark';
+  const trackHtml = `
+    <span class="switch-track" aria-hidden="true">
+      <span class="switch-thumb">${icon(isDark ? 'moon' : 'sun', 12)}</span>
+    </span>
+    <span class="switch-label">${isDark ? 'Gelap' : 'Terang'}</span>`;
+  const label = isDark ? 'Mode gelap aktif' : 'Mode terang aktif';
+  const nextLabel = isDark ? 'Mode terang' : 'Mode gelap';
+  document.querySelectorAll('#themeToggle, [data-theme-toggle]').forEach((btn) => {
+    btn.innerHTML = trackHtml;
+    btn.title = nextLabel;
+    btn.setAttribute('aria-label', `Aktifkan ${nextLabel.toLowerCase()}`);
+    btn.setAttribute('role', 'switch');
+    btn.setAttribute('aria-checked', isDark ? 'true' : 'false');
+    btn.dataset.themeState = theme;
+    void label;
   });
 }
 
@@ -663,7 +666,7 @@ function renderAuth() {
       <div class="auth-foot">Melayani distribusi pangan yang merata dan aman</div>
     </aside>
     <div class="auth-panel">
-      <button class="icon-btn auth-theme" type="button" data-theme-toggle title="Ganti tema" aria-label="Ganti tema terang/gelap"></button>
+      <button class="theme-switch auth-theme" type="button" data-theme-toggle title="Ganti tema" aria-label="Ganti tema terang/gelap"></button>
       <div class="auth-card">
         <div class="eyebrow">Platform redistribusi pangan</div>
         <h1>Masuk ke akun Anda</h1>
@@ -697,8 +700,14 @@ function renderAuth() {
           <label>Alamat</label>
           <input name="address" placeholder="Jl. …, kota/kabupaten Anda" />
           <div class="grid grid-2">
-            <div><label>Lintang (latitude)</label><input name="lat" type="number" step="any" placeholder="-7.03" /></div>
-            <div><label>Bujur (longitude)</label><input name="lng" type="number" step="any" placeholder="112.74" /></div>
+            <div>
+              <label>Lokasi — Lintang (Latitude)</label>
+              <input name="lat" type="number" step="any" placeholder="-7.03" />
+            </div>
+            <div>
+              <label>Lokasi — Bujur (Longitude)</label>
+              <input name="lng" type="number" step="any" placeholder="112.74" />
+            </div>
           </div>
           <div id="courierField" hidden>
             <label>Kapasitas Logistik (porsi)</label>
@@ -984,10 +993,18 @@ function renderDonorForm() {
         <div><label>Berlaku s/d</label><input name="expiry_at" type="datetime-local" required /></div>
       </div>
       <div class="grid grid-2">
-        <div><label>Lintang (latitude)</label><input name="lat" type="number" step="any" placeholder="-7.03" /></div>
-        <div><label>Bujur (longitude)</label><input name="lng" type="number" step="any" placeholder="112.74" /></div>
+        <div>
+          <label>Lokasi — Lintang (Latitude)</label>
+          <input name="lat" type="number" step="any" placeholder="-7.03" />
+          <div class="field-hint">Kosongkan untuk pakai alamat akun</div>
+        </div>
+        <div>
+          <label>Lokasi — Bujur (Longitude)</label>
+          <input name="lng" type="number" step="any" placeholder="112.74" />
+          <div class="field-hint">Kosongkan untuk pakai alamat akun</div>
+        </div>
       </div>
-      <label>Foto kondisi makanan (opsional, maks 1MB)</label>
+      <label class="section-gap">Foto kondisi makanan (opsional, maks 1MB)</label>
       <input name="photo" type="file" accept="image/*" />
       <div class="form-actions">
         <button class="btn" type="submit">${icon('upload', 15)} Simpan surplus</button>
@@ -1085,8 +1102,14 @@ async function renderRecipientForm() {
       <label>Catatan</label>
       <textarea name="note" rows="2"></textarea>
       <div class="grid grid-2">
-        <div><label>Lintang (latitude)</label><input name="lat" type="number" step="any" placeholder="-7.16" /></div>
-        <div><label>Bujur (longitude)</label><input name="lng" type="number" step="any" placeholder="113.48" /></div>
+        <div>
+          <label>Lokasi — Lintang (Latitude)</label>
+          <input name="lat" type="number" step="any" placeholder="-7.16" />
+        </div>
+        <div>
+          <label>Lokasi — Bujur (Longitude)</label>
+          <input name="lng" type="number" step="any" placeholder="113.48" />
+        </div>
       </div>
       <div class="form-actions">
         <button class="btn" type="submit">${icon('upload', 15)} Simpan kebutuhan</button>
