@@ -46,8 +46,8 @@ router.post('/', upload.single('photo'), async (req, res, next) => {
         Number(portions),
         expiry_at,
         fileToDataUri(req.file),
-        lat != null ? Number(lat) : donor?.lat ?? null,
-        lng != null ? Number(lng) : donor?.lng ?? null,
+        lat != null && lat !== '' && !Number.isNaN(Number(lat)) ? Number(lat) : donor?.lat ?? null,
+        lng != null && lng !== '' && !Number.isNaN(Number(lng)) ? Number(lng) : donor?.lng ?? null,
       ]
     );
 

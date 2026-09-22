@@ -31,8 +31,8 @@ router.post('/register', async (req, res, next) => {
         role,
         phone || null,
         address || null,
-        lat != null ? Number(lat) : null,
-        lng != null ? Number(lng) : null,
+        lat != null && lat !== '' && !Number.isNaN(Number(lat)) ? Number(lat) : null,
+        lng != null && lng !== '' && !Number.isNaN(Number(lng)) ? Number(lng) : null,
         org_name || null,
         capacity != null ? Number(capacity) : null,
       ]

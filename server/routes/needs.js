@@ -24,7 +24,7 @@ router.post('/', async (req, res, next) => {
       [req.user.id, title.trim(), Number(portions_needed), urgency || 'medium', note || null]
     );
 
-    if (lat != null && lng != null) {
+    if (lat != null && lat !== '' && lng != null && lng !== '' && !Number.isNaN(Number(lat)) && !Number.isNaN(Number(lng))) {
       await db.run('UPDATE users SET lat = ?, lng = ? WHERE id = ?', [Number(lat), Number(lng), req.user.id]);
     }
 

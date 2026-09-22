@@ -8,6 +8,103 @@ let gisLayer = null;
 const MADURA_CENTER = [-7.05, 113.25];
 const MADURA_BOUNDS = [[-7.45, 112.5], [-6.7, 114.0]];
 
+const LOCATIONS = [
+  { label: 'Bangkalan', lat: -7.0288, lng: 112.7403 },
+  { label: 'Sampang', lat: -7.1471, lng: 113.2471 },
+  { label: 'Pamekasan', lat: -7.1567, lng: 113.4833 },
+  { label: 'Sumenep', lat: -6.9898, lng: 113.8333 },
+  { label: 'Surabaya', lat: -7.2575, lng: 112.7521 },
+  { label: 'Sidoarjo', lat: -7.4478, lng: 112.7183 },
+  { label: 'Gresik', lat: -7.1566, lng: 112.6554 },
+  { label: 'Mojokerto', lat: -7.4704, lng: 112.4401 },
+];
+
+function locationSelectHtml(opts = {}) {
+  const {
+    label = 'Lokasi',
+    required = false,
+    hint = 'Pilih kota/kabupaten, atau gunakan GPS di perangkat Anda',
+  } = opts;
+  return `
+  <div class="loc-field">
+    <label>${label}${required ? '' : ' <span class="muted">(opsional)</span>'}</label>
+    <select name="location" data-loc-select ${required ? 'required' : ''}>
+      <option value="">Pilih lokasi…</option>
+      ${LOCATIONS.map((l) => `<option value="${l.lat},${l.lng}">${l.label}</option>`).join('')}
+      <option value="gps">Gunakan lokasi saya (GPS)</option>
+    </select>
+    <input type="hidden" name="lat" data-loc-lat value="" />
+    <input type="hidden" name="lng" data-loc-lng value="" />
+    <div class="field-hint">${hint}</div>
+  </div>`;
+}
+
+function bindLocationSelects(root = document) {
+  root.querySelectorAll('[data-loc-select]').forEach((sel) => {
+    if (sel._bound) return;
+    sel._bound = true;
+    sel.addEventListener('change', () => {
+      const form = sel.closest('form');
+      if (!form) return;
+      const latIn = form.querySelector('[data-loc-lat]');
+      const lngIn = form.querySelector('[data-loc-lng]');
+      if (!latIn || !lngIn) return;
+      if (sel.value === 'gps') {
+        if (!navigator.geolocation) {
+          toast('GPS tidak didukung di peramban ini', 'error');
+          sel.value = '';
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            latIn.value = pos.coords.latitude.toFixed(6);
+            lngIn.value = pos.coords.longitude.toFixed(6);
+            toast('Lokasi perangkat terisi');
+          },
+          () => {
+            toast('Izin lokasi ditolak — pilih kota manual', 'error');
+            sel.value = '';
+          },
+          { enableHighAccuracy: true, timeout: 8000 }
+        );
+      } else if (sel.value) {
+        const [lat, lng] = sel.value.split(',');
+        latIn.value = lat;
+        lngIn.value = lng;
+      } else {
+        latIn.value = '';
+        lngIn.value = '';
+      }
+    });
+  });
+}
+
+function flowStepsHtml(status) {
+  const order = ['proposed', 'picked_up', 'delivered', 'verified'];
+  const labels = {
+    proposed: 'Ditugaskan',
+    accepted: 'Ditugaskan',
+    picked_up: 'Dijemput',
+    delivered: 'Sampai',
+    verified: 'Selesai',
+    cancelled: 'Dibatalkan',
+  };
+  const key = status === 'accepted' ? 'proposed' : status;
+  const idx = order.indexOf(key);
+  if (status === 'cancelled') {
+    return `<div class="flow-steps"><span class="flow-step cancelled">Dibatalkan</span></div>`;
+  }
+  return `
+  <div class="flow-steps">
+    ${order
+      .map((s, i) => {
+        const state = idx < 0 ? '' : i < idx ? 'done' : i === idx ? 'current' : '';
+        return `<span class="flow-step ${state}">${labels[s]}</span>`;
+      })
+      .join('<span class="flow-arrow">→</span>')}
+  </div>`;
+}
+
 const ICONS = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
   moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
@@ -453,10 +550,16 @@ async function renderView() {
 }
 
 function bindView() {
+  bindLocationSelects(document.getElementById('view'));
   document.querySelectorAll('form[data-action]').forEach((f) => {
     f.addEventListener('submit', async (ev) => {
       ev.preventDefault();
       const fd = new FormData(f);
+      if (fd.has('location')) {
+        if (!fd.get('lat')) fd.delete('lat');
+        if (!fd.get('lng')) fd.delete('lng');
+        fd.delete('location');
+      }
       try {
         let res;
         if (f.dataset.multipart === '1') {
@@ -549,7 +652,7 @@ async function renderGisMap() {
       <div class="stat accent"><div class="label">Rute aktif</div><div class="value">${activeMatches.length}</div></div>
     </div>
   </div>
-  <p class="muted">Isi <b>lintang</b> &amp; <b>bujur</b> saat daftar/submit agar muncul di peta. Contoh koordinat: <code>-7.03, 112.74</code> (Bangkalan) · <code>-7.15, 113.25</code> (Sampang) · <code>-7.16, 113.48</code> (Pamekasan) · <code>-6.99, 113.83</code> (Sumenep).</p>`;
+  <p class="muted">Lokasi diambil dari pilihan kota/GPS saat daftar dan saat catat surplus atau kebutuhan. Semakin akurat lokasi, semakin tepat jarak &amp; rute AI Matching.</p>`;
 }
 
 function initGisMap() {
@@ -705,16 +808,7 @@ function renderAuth() {
           <input name="phone" placeholder="08xxx" />
           <label>Alamat</label>
           <input name="address" placeholder="Jl. …, kota/kabupaten Anda" />
-          <div class="grid grid-2">
-            <div>
-              <label>Lokasi — Lintang (Latitude)</label>
-              <input name="lat" type="number" step="any" placeholder="-7.03" />
-            </div>
-            <div>
-              <label>Lokasi — Bujur (Longitude)</label>
-              <input name="lng" type="number" step="any" placeholder="112.74" />
-            </div>
-          </div>
+          ${locationSelectHtml({ label: 'Lokasi domisili', hint: 'Untuk peta & perhitungan rute — pilih kota atau GPS' })}
           <div id="courierField" hidden>
             <label>Kapasitas Logistik (porsi)</label>
             <input name="capacity" type="number" min="1" placeholder="50" />
@@ -725,9 +819,6 @@ function renderAuth() {
           </div>
           <button class="btn btn-block" type="submit">Daftar — menunggu verifikasi admin</button>
         </form>
-        <div class="demo-note">
-          Akun demo: <code>admin@foodrescue.id</code> / <code>admin123</code>
-        </div>
       </div>
     </div>
   </div>`;
@@ -777,6 +868,9 @@ function bindAuth() {
     ev.preventDefault();
     const fd = new FormData(formReg);
     const body = Object.fromEntries(fd.entries());
+    if (!body.lat) delete body.lat;
+    if (!body.lng) delete body.lng;
+    delete body.location;
     try {
       const res = await api('/api/auth/register', { method: 'POST', body });
       toast(res.message);
@@ -792,6 +886,8 @@ function bindAuth() {
     document.getElementById('courierField').hidden = !isCourier;
     document.getElementById('orgField').hidden = isCourier;
   });
+
+  bindLocationSelects(formReg);
 }
 
 /* ========== PAGES ========== */
@@ -1031,9 +1127,18 @@ async function renderAdminOutbox() {
   </div>`;
 }
 
-function renderDonorForm() {
+async function renderDonorForm() {
   return `
   ${pageHead('Catat Surplus Makanan', 'Catat surplus dari hotel, restoran, atau ritel untuk dibagikan')}
+  <div class="card">
+    <div class="card-head"><h2>Alur donor</h2></div>
+    <div class="flow-explain">
+      <div class="flow-explain-item"><span class="flow-num">1</span><div><strong>Isi form di bawah</strong><span>Nama, porsi, masa simpan, lokasi, foto</span></div></div>
+      <div class="flow-explain-item"><span class="flow-num">2</span><div><strong>Admin jalankan AI Matching</strong><span>Surplus dicocokkan ke penerima &amp; kurir terdekat</span></div></div>
+      <div class="flow-explain-item"><span class="flow-num">3</span><div><strong>Kurir jemput &amp; antar</strong><span>Pantau status di menu “Pencocokan Saya”</span></div></div>
+      <div class="flow-explain-item"><span class="flow-num">4</span><div><strong>Penerima konfirmasi OTP</strong><span>Transaksi selesai &amp; tercatat di audit</span></div></div>
+    </div>
+  </div>
   <div class="card">
     <form data-action="1" data-endpoint="/api/food" data-multipart="1">
       <label>Nama surplus</label>
@@ -1050,18 +1155,10 @@ function renderDonorForm() {
         <div><label>Jumlah porsi</label><input name="portions" type="number" min="1" required /></div>
         <div><label>Berlaku s/d</label><input name="expiry_at" type="datetime-local" required /></div>
       </div>
-      <div class="grid grid-2">
-        <div>
-          <label>Lokasi — Lintang (Latitude)</label>
-          <input name="lat" type="number" step="any" placeholder="-7.03" />
-          <div class="field-hint">Kosongkan untuk pakai alamat akun</div>
-        </div>
-        <div>
-          <label>Lokasi — Bujur (Longitude)</label>
-          <input name="lng" type="number" step="any" placeholder="112.74" />
-          <div class="field-hint">Kosongkan untuk pakai alamat akun</div>
-        </div>
-      </div>
+      ${locationSelectHtml({
+        label: 'Lokasi penjemputan',
+        hint: 'Kosongkan untuk pakai alamat akun — pilih kota atau GPS',
+      })}
       <label class="section-gap">Foto kondisi makanan (opsional, maks 1MB)</label>
       <input name="photo" type="file" accept="image/*" />
       <div class="form-actions">
@@ -1142,6 +1239,15 @@ async function renderRecipientForm() {
   return `
   ${pageHead('Kebutuhan Pangan', 'Ajukan kebutuhan porsi makanan untuk komunitas atau lembaga Anda')}
   <div class="card">
+    <div class="card-head"><h2>Alur penerima manfaat</h2></div>
+    <div class="flow-explain">
+      <div class="flow-explain-item"><span class="flow-num">1</span><div><strong>Ajukan kebutuhan</strong><span>Jumlah porsi + tingkat urgensi + lokasi</span></div></div>
+      <div class="flow-explain-item"><span class="flow-num">2</span><div><strong>Admin jalankan AI Matching</strong><span>Donor &amp; kurir ditugaskan otomatis</span></div></div>
+      <div class="flow-explain-item"><span class="flow-num">3</span><div><strong>Kurir mengantar</strong><span>Notifikasi masuk saat dijemput &amp; sampai</span></div></div>
+      <div class="flow-explain-item"><span class="flow-num">4</span><div><strong>Masukkan OTP</strong><span>Buka menu “Konfirmasi OTP” → klik konfirmasi terima</span></div></div>
+    </div>
+  </div>
+  <div class="card">
     <form data-action="1" data-endpoint="/api/needs">
       <label>Judul kebutuhan</label>
       <input name="title" required placeholder="Makan malam warga prasejahtera" />
@@ -1159,16 +1265,10 @@ async function renderRecipientForm() {
       </div>
       <label>Catatan</label>
       <textarea name="note" rows="2"></textarea>
-      <div class="grid grid-2">
-        <div>
-          <label>Lokasi — Lintang (Latitude)</label>
-          <input name="lat" type="number" step="any" placeholder="-7.16" />
-        </div>
-        <div>
-          <label>Lokasi — Bujur (Longitude)</label>
-          <input name="lng" type="number" step="any" placeholder="113.48" />
-        </div>
-      </div>
+      ${locationSelectHtml({
+        label: 'Lokasi penyaluran',
+        hint: 'Pilih kota/kabupaten atau GPS agar muncul di peta & rute',
+      })}
       <div class="form-actions">
         <button class="btn" type="submit">${icon('upload', 15)} Simpan kebutuhan</button>
       </div>
@@ -1206,23 +1306,62 @@ async function renderRecipientNeedsList() {
 async function renderRecipientMatches() {
   const rows = await api('/api/matches');
   const ready = rows.filter((m) => ['picked_up', 'delivered'].includes(m.status));
+  const withOtp = await Promise.all(
+    ready.map(async (m) => {
+      let otp = null;
+      try {
+        otp = await api(`/api/deliveries/${m.id}/otp-status`);
+      } catch (_) {}
+      return { ...m, otpInfo: otp };
+    })
+  );
   return `
-  ${pageHead('Konfirmasi OTP', 'Masukkan kode 6 digit untuk konfirmasi serah terima kiriman')}
+  ${pageHead(
+    'Konfirmasi OTP',
+    'Masukkan kode 6 digit dari kurir/notifikasi untuk konfirmasi serah terima'
+  )}
+  <div class="card">
+    <div class="card-head"><h2>Alur serah terima</h2></div>
+    <div class="flow-explain">
+      <div class="flow-explain-item"><span class="flow-num">1</span><div><strong>Kurir jemput surplus</strong><span>Foto kondisi makanan diunggah kurir</span></div></div>
+      <div class="flow-explain-item"><span class="flow-num">2</span><div><strong>Kurir antar ke Anda</strong><span>Status berubah jadi “sampai di lokasi”</span></div></div>
+      <div class="flow-explain-item"><span class="flow-num">3</span><div><strong>OTP muncul di sini</strong><span>Kode 6 digit tampil di kartu konfirmasi di bawah (juga dikirim ke notifikasi &amp; WhatsApp/email bila aktif)</span></div></div>
+      <div class="flow-explain-item"><span class="flow-num">4</span><div><strong>Konfirmasi terima</strong><span>Klik konfirmasi → transaksi selesai &amp; tercatat di audit</span></div></div>
+    </div>
+  </div>
   <div class="card">
     <div class="card-head"><h2>Menunggu konfirmasi</h2></div>
-    ${ready.length === 0 ? '<div class="empty">Belum ada kiriman menunggu konfirmasi OTP.</div>' : ready.map((m) => `
+    ${withOtp.length === 0 ? '<div class="empty">Belum ada kiriman menunggu konfirmasi OTP.</div>' : withOtp.map((m) => {
+      const code = m.otpInfo?.code && !m.otpInfo.used_at ? m.otpInfo.code : null;
+      const expired = m.otpInfo?.expires_at && new Date(m.otpInfo.expires_at).getTime() < Date.now();
+      return `
       <div class="notif unread">
         <div class="spread">
           <div>
             <div class="notif-title">${esc(m.listing_name)} — ${m.portions} porsi ${foodTypeTag(m.food_type)}</div>
-            <span class="muted">Dari ${esc(m.donor_name)} · Kurir ${esc(m.courier_name)} · ${statusTag(m.status)}</span>
+            <span class="muted">Dari ${esc(m.donor_name)} · Kurir ${esc(m.courier_name)}</span>
           </div>
+          ${statusTag(m.status)}
         </div>
+        ${flowStepsHtml(m.status)}
+        ${
+          code && !expired
+            ? `<div class="otp-box">
+                <div class="otp-label">Kode OTP Anda</div>
+                <div class="otp-code">${esc(code)}</div>
+                <div class="muted">Berlaku s/d ${fmtDate(m.otpInfo.expires_at)}</div>
+              </div>`
+            : `<div class="otp-box otp-box-wait">
+                <div class="otp-label">Kode OTP</div>
+                <div class="muted">${m.otpInfo?.used_at ? 'Sudah dipakai' : expired ? 'Kedaluwarsa — minta kurir jemput ulang' : 'Belum dibuat — menunggu kurir mengunggah foto & menjemput'}</div>
+              </div>`
+        }
         <div class="row" style="margin-top:10px">
-          <input style="max-width:200px;margin:0" id="otp-${m.id}" placeholder="6 digit OTP" maxlength="6" inputmode="numeric" />
+          <input style="max-width:200px;margin:0" id="otp-${m.id}" placeholder="6 digit OTP" maxlength="6" inputmode="numeric" value="${code && !expired ? esc(code) : ''}" />
           <button class="btn btn-sm" type="button" id="verifyBtn-${m.id}" data-verify="${m.id}">${icon('check', 14)} Konfirmasi terima</button>
         </div>
-      </div>`).join('')}
+      </div>`;
+    }).join('')}
   </div>
   <div class="card">
     <div class="card-head"><h2>Riwayat kiriman</h2></div>
@@ -1246,6 +1385,15 @@ async function renderCourier() {
   return `
   ${pageHead('Tugas Kurir', 'Ambil foto kondisi makanan, antar, dan tandai status pengiriman')}
   <div class="card">
+    <div class="card-head"><h2>Alur kurir</h2></div>
+    <div class="flow-explain">
+      <div class="flow-explain-item"><span class="flow-num">1</span><div><strong>Terima tugas</strong><span>Muncul setelah admin jalankan AI Matching — lihat rute di Peta GIS</span></div></div>
+      <div class="flow-explain-item"><span class="flow-num">2</span><div><strong>Foto &amp; jemput</strong><span>Wajib unggah foto kondisi makanan → OTP dikirim ke penerima</span></div></div>
+      <div class="flow-explain-item"><span class="flow-num">3</span><div><strong>Antar &amp; tandai sampai</strong><span>Klik “Tandai sampai di lokasi” setelah tiba</span></div></div>
+      <div class="flow-explain-item"><span class="flow-num">4</span><div><strong>Penerima masukkan OTP</strong><span>Status jadi selesai — Anda dapat tugas berikutnya</span></div></div>
+    </div>
+  </div>
+  <div class="card">
     <div class="card-head"><h2>Tugas aktif</h2></div>
     ${active.length === 0 ? '<div class="empty"><div class="empty-title">Belum ada tugas</div>Minta admin menjalankan pencocokan AI.</div>' : active.map((m) => {
       const route = m.route;
@@ -1258,6 +1406,7 @@ async function renderCourier() {
           </div>
           ${statusTag(m.status)}
         </div>
+        ${flowStepsHtml(m.status)}
         ${m.food_type === 'wet' || m.food_type === 'dry' ? sopHtml(m.food_type, { compact: true }) : ''}
         ${route ? `
         <div style="margin-top:12px">
