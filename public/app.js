@@ -2,6 +2,11 @@ const API = '';
 let token = localStorage.getItem('frai_token') || '';
 let me = JSON.parse(localStorage.getItem('frai_user') || 'null');
 let currentTab = '';
+let gisMap = null;
+let gisLayer = null;
+
+const MADURA_CENTER = [-7.05, 113.25];
+const MADURA_BOUNDS = [[-7.45, 112.5], [-6.7, 114.0]];
 
 async function api(path, opts = {}) {
   const headers = { ...(opts.headers || {}) };
@@ -58,43 +63,89 @@ function logout() {
   localStorage.removeItem('frai_user');
   token = '';
   me = null;
+  destroyMap();
   render();
 }
 
 const NAV = {
   admin: [
-    ['dashboard', 'Dashboard'], ['users', 'Pengguna'], ['matches', 'Matching'],
-    ['logs', 'Audit Log'], ['notif', 'Notifikasi'],
+    ['dashboard', '📊', 'Dashboard'],
+    ['gis', '🗺️', 'Peta GIS'],
+    ['users', '👥', 'Pengguna'],
+    ['matches', '🤖', 'AI Matching'],
+    ['logs', '📜', 'Audit Log'],
+    ['notif', '🔔', 'Notifikasi'],
   ],
-  donor: [['donor', 'Input Surplus'], ['donor-listings', 'Listing Saya'], ['donor-matches', 'Match Saya'], ['notif', 'Notifikasi']],
-  recipient: [['recipient', 'Kebutuhan'], ['recipient-matches', 'Konfirmasi OTP'], ['notif', 'Notifikasi']],
-  courier: [['courier', 'Tugas Kurir'], ['notif', 'Notifikasi']],
+  donor: [
+    ['donor', '📦', 'Input Surplus'],
+    ['donor-listings', '📋', 'Listing Saya'],
+    ['donor-matches', '🔗', 'Match Saya'],
+    ['gis', '🗺️', 'Peta GIS'],
+    ['notif', '🔔', 'Notifikasi'],
+  ],
+  recipient: [
+    ['recipient', '🙏', 'Kebutuhan Pangan'],
+    ['recipient-matches', '🔐', 'Konfirmasi OTP'],
+    ['gis', '🗺️', 'Peta GIS'],
+    ['notif', '🔔', 'Notifikasi'],
+  ],
+  courier: [
+    ['courier', '🚚', 'Tugas Kurir'],
+    ['gis', '🗺️', 'Peta GIS'],
+    ['notif', '🔔', 'Notifikasi'],
+  ],
 };
 
 function setTab(t) {
   currentTab = t;
+  closeSidebar();
   renderView();
 }
 
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+}
+function destroyMap() {
+  if (gisMap) {
+    gisMap.remove();
+    gisMap = null;
+    gisLayer = null;
+  }
+}
+
 function render() {
-  const topbar = document.getElementById('topbar');
-  const view = document.getElementById('view');
+  const authRoot = document.getElementById('authRoot');
+  const layout = document.getElementById('appLayout');
 
   if (!token || !me) {
-    topbar.hidden = true;
-    view.innerHTML = renderAuth();
+    layout.hidden = true;
+    authRoot.hidden = false;
+    authRoot.innerHTML = renderAuth();
     bindAuth();
     return;
   }
 
-  topbar.hidden = false;
+  destroyMap();
+  authRoot.hidden = true;
+  authRoot.innerHTML = '';
+  layout.hidden = false;
+
   document.getElementById('userName').textContent = me.name;
   document.getElementById('userRole').textContent = me.role;
+  document.getElementById('userStatus').textContent = me.status === 'active' ? '✓ Terverifikasi' : `Status: ${me.status}`;
 
   const tabs = NAV[me.role] || [];
   if (!currentTab || !tabs.find((t) => t[0] === currentTab)) currentTab = tabs[0][0];
   document.getElementById('nav').innerHTML = tabs
-    .map(([id, label]) => `<button class="${currentTab === id ? 'active' : ''}" onclick="setTab('${id}')">${label}</button>`)
+    .map(
+      ([id, icon, label]) =>
+        `<button type="button" class="${currentTab === id ? 'active' : ''}" onclick="setTab('${id}')"><span>${icon}</span> ${label}</button>`
+    )
     .join('');
 
   renderView();
@@ -106,6 +157,7 @@ async function renderView() {
   try {
     const renderers = {
       dashboard: renderAdminDashboard,
+      gis: renderGisMap,
       users: renderAdminUsers,
       matches: renderAdminMatches,
       logs: renderAdminLogs,
@@ -119,18 +171,19 @@ async function renderView() {
     };
     const fn = renderers[currentTab];
     view.innerHTML = fn ? await fn() : '<div class="empty">Halaman tidak ditemukan</div>';
-    if (fn) bindView();
+    if (fn) {
+      bindView();
+      if (currentTab === 'gis') initGisMap();
+    }
   } catch (e) {
     view.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
 }
 
 function bindView() {
-  const forms = document.querySelectorAll('form[data-action]');
-  forms.forEach((f) => {
+  document.querySelectorAll('form[data-action]').forEach((f) => {
     f.addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      const action = f.dataset.action;
       const fd = new FormData(f);
       try {
         let res;
@@ -153,19 +206,8 @@ function bindView() {
     btn.addEventListener('click', async () => {
       btn.disabled = true;
       try {
-        const isForm = btn.dataset.form;
-        let body, multipart = btn.dataset.multipart === '1';
-        if (isForm) {
-          const fd = new FormData(document.getElementById(isForm));
-          body = fd;
-        } else {
-          body = btn.dataset.body ? JSON.parse(btn.dataset.body) : {};
-        }
-        const res = await api(btn.dataset.post, {
-          method: btn.dataset.method || 'POST',
-          body: multipart ? body : body,
-          headers: multipart ? {} : undefined,
-        });
+        const body = btn.dataset.body ? JSON.parse(btn.dataset.body) : {};
+        const res = await api(btn.dataset.post, { method: btn.dataset.method || 'POST', body });
         toast(res.message || 'Berhasil');
         renderView();
       } catch (e) {
@@ -202,12 +244,149 @@ function bindView() {
   });
 }
 
+/* ========== GIS MAP ========== */
+
+async function renderGisMap() {
+  const [users, listings, needs, matches] = await Promise.all([
+    api('/api/admin/users').catch(() => []),
+    api('/api/food').catch(() => []),
+    api('/api/needs').catch(() => []),
+    api('/api/matches').catch(() => []),
+  ]);
+
+  const openNeeds = needs.filter((n) => n.status === 'open');
+  const activeMatches = matches.filter((m) => !['cancelled'].includes(m.status));
+
+  return `
+  <div class="page-title">🗺️ Peta GIS — Madura, Jawa Timur</div>
+  <div class="card">
+    <div class="spread">
+      <h2 style="margin:0">Sebaran Donor · Penerima · Kurir · Rute</h2>
+      <span class="muted">Leaflet + OpenStreetMap · fokus Madura</span>
+    </div>
+    <div class="map-legend" style="margin-top:12px">
+      <span><i class="dot dot-donor"></i> Donor</span>
+      <span><i class="dot dot-recipient"></i> Penerima</span>
+      <span><i class="dot dot-courier"></i> Kurir</span>
+      <span><i class="dot dot-listing"></i> Surplus tersedia</span>
+      <span style="color:#2563eb">━ Rute pengantaran</span>
+    </div>
+    <div class="map-wrap"><div id="gisMap"></div></div>
+    <div class="grid grid-4">
+      <div class="card stat"><div class="value">${users.filter((u) => u.role === 'donor' && u.lat).length}</div><div class="label">Donor di peta</div></div>
+      <div class="card stat"><div class="value">${users.filter((u) => u.role === 'recipient' && u.lat).length}</div><div class="label">Penerima di peta</div></div>
+      <div class="card stat"><div class="value">${users.filter((u) => u.role === 'courier' && u.lat).length}</div><div class="label">Kurir di peta</div></div>
+      <div class="card stat"><div class="value">${activeMatches.length}</div><div class="label">Rute aktif</div></div>
+    </div>
+    <p class="muted">Koordinat mengikuti data pengguna & listing. Saat register/submit, isi lat/lng di area Madura (contoh: Bangkalan <code>-7.03, 112.74</code>, Sampang <code>-7.15, 113.25</code>, Pamekasan <code>-7.16, 113.48</code>, Sumenep <code>-6.99, 113.83</code>).</p>
+  </div>`;
+}
+
+function initGisMap() {
+  const el = document.getElementById('gisMap');
+  if (!el || typeof L === 'undefined') return;
+
+  destroyMap();
+  gisMap = L.map('gisMap', { zoomControl: true }).setView(MADURA_CENTER, 9);
+  gisLayer = L.layerGroup().addTo(gisMap);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '&copy; OpenStreetMap',
+  }).addTo(gisMap);
+
+  gisMap.fitBounds(MADURA_BOUNDS);
+
+  loadMapData().catch((e) => toast(e.message, 'error'));
+
+  setTimeout(() => gisMap && gisMap.invalidateSize(), 200);
+}
+
+async function loadMapData() {
+  if (!gisMap || !gisLayer) return;
+
+  const [users, listings, matches] = await Promise.all([
+    api('/api/admin/users').catch(() => []),
+    api('/api/food').catch(() => []),
+    api('/api/matches').catch(() => []),
+  ]);
+
+  gisLayer.clearLayers();
+
+  const icon = (color, label) =>
+    L.divIcon({
+      className: '',
+      html: `<div style="background:${color};width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px ${color}88"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+      popupAnchor: [0, -8],
+    });
+
+  for (const u of users) {
+    if (u.lat == null || u.lng == null) continue;
+    if (!['donor', 'recipient', 'courier'].includes(u.role)) continue;
+    const colors = { donor: '#2563eb', recipient: '#dc2626', courier: '#f59e0b' };
+    const roleLabel = { donor: 'Donor', recipient: 'Penerima', courier: 'Kurir' };
+    L.marker([u.lat, u.lng], { icon: icon(colors[u.role]) })
+      .bindPopup(
+        `<b>${esc(u.name)}</b><br>${roleLabel[u.role]} · ${statusTag(u.status)}<br>` +
+          `<span class="muted">${esc(u.address || '')}</span>` +
+          (u.capacity ? `<br><span class="muted">Kapasitas: ${u.capacity} porsi</span>` : '')
+      )
+      .addTo(gisLayer);
+  }
+
+  for (const l of listings) {
+    if (l.lat == null || l.lng == null) continue;
+    if (!['available', 'matched'].includes(l.status)) continue;
+    L.circleMarker([l.lat, l.lng], {
+      radius: 7,
+      color: '#fff',
+      weight: 2,
+      fillColor: '#16a34a',
+      fillOpacity: 0.95,
+    })
+      .bindPopup(
+        `<b>📦 ${esc(l.name)}</b><br>${l.portions} porsi · ${statusTag(l.status)}<br>` +
+          `<span class="muted">Exp: ${fmtDate(l.expiry_at)}</span>`
+      )
+      .addTo(gisLayer);
+  }
+
+  for (const m of matches) {
+    if (!m.route || m.status === 'cancelled') continue;
+    const pts = (m.route.waypoints || [])
+      .filter((w) => w.lat != null && w.lng != null)
+      .map((w) => [w.lat, w.lng]);
+    if (pts.length < 2) continue;
+
+    L.polyline(pts, { color: '#2563eb', weight: 4, opacity: 0.75, dashArray: '8 6' }).addTo(gisLayer);
+
+    const mid = pts[Math.floor(pts.length / 2)];
+    L.circleMarker(mid, {
+      radius: 5,
+      color: '#fff',
+      weight: 2,
+      fillColor: '#7c3aed',
+      fillOpacity: 1,
+    })
+      .bindPopup(
+        `<b>🚛 Match #${m.id}</b><br>${esc(m.listing_name || '')} → ${esc(m.need_title || '')}<br>` +
+          `${m.distance_km} km · ${statusTag(m.status)}` +
+          (m.score_percent != null ? `<br>Skor: ${m.score_percent}%` : '')
+      )
+      .addTo(gisLayer);
+  }
+}
+
+/* ========== AUTH ========== */
+
 function renderAuth() {
   return `
   <div class="auth-wrap">
     <div class="auth-card">
       <h1>🥗 Food Rescue AI</h1>
-      <p class="sub">Platform redistribusi surplus makanan berbasis AI Matching &amp; GIS</p>
+      <p class="sub">Redistribusi surplus makanan · AI Matching &amp; GIS · Madura, Jawa Timur</p>
       <div class="auth-tabs">
         <button id="tabLogin" class="active" type="button">Login</button>
         <button id="tabReg" type="button">Registrasi</button>
@@ -221,7 +400,7 @@ function renderAuth() {
       </form>
       <form id="formReg" hidden data-action="1" data-endpoint="/api/auth/register">
         <label>Nama / Nama Organisasi</label>
-        <input name="name" required placeholder="Contoh: Hotel Melati" />
+        <input name="name" required placeholder="Contoh: Masjid Jami' Bangkalan" />
         <label>Email</label>
         <input name="email" type="email" required />
         <label>Password</label>
@@ -235,10 +414,10 @@ function renderAuth() {
         <label>Telepon</label>
         <input name="phone" placeholder="08xxx" />
         <label>Alamat</label>
-        <input name="address" placeholder="Jl. ..." />
+        <input name="address" placeholder="Jl. ... , Bangkalan / Sampang / Pamekasan / Sumenep" />
         <div class="grid grid-2">
-          <div><label>Latitude</label><input name="lat" type="number" step="any" placeholder="-6.2" /></div>
-          <div><label>Longitude</label><input name="lng" type="number" step="any" placeholder="106.8" /></div>
+          <div><label>Latitude (Madura)</label><input name="lat" type="number" step="any" placeholder="-7.03" /></div>
+          <div><label>Longitude (Madura)</label><input name="lng" type="number" step="any" placeholder="112.74" /></div>
         </div>
         <div id="courierField" hidden>
           <label>Kapasitas Logistik (porsi)</label>
@@ -250,7 +429,7 @@ function renderAuth() {
         </div>
         <button class="btn" style="width:100%" type="submit">Daftar (menunggu verifikasi admin)</button>
       </form>
-      <p class="muted" style="margin-top:16px">Demo: admin@foodrescue.id / admin123</p>
+      <p class="muted" style="margin-top:16px">Demo awal: admin@foodrescue.id / admin123</p>
     </div>
   </div>`;
 }
@@ -316,16 +495,28 @@ function bindAuth() {
   });
 }
 
+/* ========== PAGES ========== */
+
 async function renderAdminDashboard() {
   const s = await api('/api/admin/stats');
   const runs = s.performance.last_matching_runs || [];
+  const isEmpty =
+    s.listings.total === 0 && s.needs.total === 0 && s.matches.total === 0 && s.users.total <= 1;
+
   return `
+  <div class="page-title">📊 Dashboard Monitoring</div>
+  ${isEmpty ? `
+  <div class="empty" style="margin-bottom:16px">
+    <b>Web masih kosong — siap diisi dari nol.</b><br>
+    Langkah: (1) Donor daftar &amp; input surplus · (2) Penerima daftar &amp; ajukan kebutuhan ·
+    (3) Admin verifikasi pengguna · (4) Jalankan AI Matching
+  </div>` : ''}
   <div class="card">
     <div class="spread">
-      <h2>📊 Dashboard Monitoring (FR-09)</h2>
+      <h2 style="margin:0">Status Sistem</h2>
       <button class="btn" data-post="/api/matches/run">▶ Jalankan AI Matching (FR-04)</button>
     </div>
-    <p class="muted">Target: matching &lt; 3.000 ms — last run: ${runs[0]?.duration_ms ?? '-'} ms ${s.performance.all_under_target ? '✅' : ''}</p>
+    <p class="muted" style="margin-top:8px">Target matching &lt; 3.000 ms — last run: ${runs[0]?.duration_ms ?? '-'} ms ${s.performance.all_under_target ? '✅' : ''}</p>
   </div>
   <div class="grid grid-4">
     <div class="card stat"><div class="value">${s.users.total}</div><div class="label">Total Pengguna</div></div>
@@ -344,11 +535,11 @@ async function renderAdminDashboard() {
         <tr><td>Donor</td><td>${s.users.donors}</td></tr>
         <tr><td>Penerima</td><td>${s.users.recipients}</td></tr>
         <tr><td>Kurir</td><td>${s.users.couriers}</td></tr>
-        <tr><td>Admin</td><td>${s.users.total - s.users.donors - s.users.recipients - s.users.couriers}</td></tr>
+        <tr><td>Admin</td><td>${Math.max(0, s.users.total - s.users.donors - s.users.recipients - s.users.couriers)}</td></tr>
       </table>
     </div>
     <div class="card">
-      <h2>Status Listing &amp; Kebutuhan</h2>
+      <h2>Listing &amp; Kebutuhan</h2>
       <table>
         <tr><td>Listing tersedia</td><td>${s.listings.available} / ${s.listings.total}</td></tr>
         <tr><td>Listing terverifikasi</td><td>${s.listings.verified}</td></tr>
@@ -361,8 +552,8 @@ async function renderAdminDashboard() {
     <h2>Riwayat Performa AI Matching</h2>
     ${runs.length === 0 ? '<div class="empty">Belum ada run</div>' : `
     <table>
-      <tr><th>Waktu</th><th>Kandidat (L/N/C)</th><th>Dibuat</th><th>Durasi (ms)</th></tr>
-      ${runs.map(r => `<tr><td>-</td><td>${r.candidates_listings ?? '-'}/${r.candidates_needs ?? '-'}/${r.candidates_couriers ?? '-'}</td><td>${r.created ?? '-'}</td><td>${r.duration_ms ?? '-'}</td></tr>`).join('')}
+      <tr><th>Kandidat (L/N/C)</th><th>Dibuat</th><th>Durasi (ms)</th></tr>
+      ${runs.map(r => `<tr><td>${r.candidates_listings ?? '-'}/${r.candidates_needs ?? '-'}/${r.candidates_couriers ?? '-'}</td><td>${r.created ?? '-'}</td><td>${r.duration_ms ?? '-'}</td></tr>`).join('')}
     </table>`}
   </div>`;
 }
@@ -370,10 +561,11 @@ async function renderAdminDashboard() {
 async function renderAdminUsers() {
   const users = await api('/api/admin/users');
   return `
+  <div class="page-title">👥 Kelola Pengguna (FR-10)</div>
   <div class="card">
-    <h2>👥 Kelola Pengguna (FR-10)</h2>
+    ${users.length <= 1 ? '<div class="empty">Belum ada pengguna selain admin. Ajukan registrasi dari halaman login.</div>' : `
     <table>
-      <tr><th>Nama</th><th>Email</th><th>Role</th><th>Status</th><th>Lokasi</th><th>Aksi</th></tr>
+      <tr><th>Nama</th><th>Email</th><th>Role</th><th>Status</th><th>Lokasi (Madura/Jatim)</th><th>Aksi</th></tr>
       ${users.map(u => `
       <tr>
         <td>${esc(u.name)}${u.org_name ? `<br><span class="muted">${esc(u.org_name)}</span>` : ''}</td>
@@ -387,25 +579,26 @@ async function renderAdminUsers() {
           ${u.role !== 'admin' ? `<button class="btn btn-sm btn-outline" data-delete="/api/admin/users/${u.id}">Hapus</button>` : ''}
         </td>
       </tr>`).join('')}
-    </table>
+    </table>`}
   </div>`;
 }
 
 async function renderAdminMatches() {
   const rows = await api('/api/admin/matches');
   return `
+  <div class="page-title">🤖 AI Matching &amp; Alokasi (FR-04)</div>
   <div class="card">
     <div class="spread">
-      <h2>🤖 Hasil AI Matching (FR-04)</h2>
+      <h2 style="margin:0">Hasil Matching</h2>
       <button class="btn" data-post="/api/matches/run">▶ Jalankan Matching</button>
     </div>
-    ${rows.length === 0 ? '<div class="empty">Belum ada match. Jalankan AI Matching.</div>' : `
-    <table>
+    ${rows.length === 0 ? '<div class="empty" style="margin-top:12px">Belum ada match — isi surplus &amp; kebutuhan dulu, lalu jalankan AI Matching.</div>' : `
+    <table style="margin-top:12px">
       <tr><th>#</th><th>Surplus → Kebutuhan</th><th>Kurir</th><th>Skor</th><th>Jarak</th><th>Status</th></tr>
       ${rows.map(m => `
       <tr>
         <td>${m.id}</td>
-        <td><b>${esc(m.listing_name)}</b> (${m.portions} porsi)<br>→ ${esc(m.need_title)} ${statusTag(m.urgency)}<br><span class="muted">Donor: ${esc(m.donor_name)} | Penerima: ${esc(m.recipient_name)}</span></td>
+        <td><b>${esc(m.listing_name)}</b> (${m.portions} porsi)<br>→ ${esc(m.need_title)} ${statusTag(m.urgency)}<br><span class="muted">${esc(m.donor_name)} → ${esc(m.recipient_name)}</span></td>
         <td>${esc(m.courier_name)}</td>
         <td>
           <b>${m.score_percent}%</b>
@@ -422,27 +615,28 @@ async function renderAdminMatches() {
 async function renderAdminLogs() {
   const logs = await api('/api/admin/logs');
   return `
+  <div class="page-title">📜 Audit Log Immutable</div>
   <div class="card">
-    <h2>📜 Audit Log Immutable (tidak bisa di-update/dihapus)</h2>
+    ${logs.length === 0 ? '<div class="empty">Belum ada aktivitas tercatat.</div>' : `
     <table>
       <tr><th>ID</th><th>Waktu</th><th>User</th><th>Aksi</th><th>Entity</th><th>Detail</th></tr>
       ${logs.map(l => `
       <tr>
         <td>${l.id}</td>
         <td class="muted">${fmtDate(l.created_at)}</td>
-        <td>${esc(l.user_name || 'system')}<br><span class="muted">${esc(l.user_role || '')}</span></td>
+        <td>${esc(l.user_name || 'system')}</td>
         <td><code>${esc(l.action)}</code></td>
         <td>${esc(l.entity)}${l.entity_id ? '#' + esc(l.entity_id) : ''}</td>
-        <td class="muted" style="max-width:280px;word-break:break-all">${l.detail ? esc(l.detail) : '-'}</td>
+        <td class="muted" style="max-width:260px;word-break:break-all">${l.detail ? esc(l.detail) : '-'}</td>
       </tr>`).join('')}
-    </table>
+    </table>`}
   </div>`;
 }
 
 function renderDonorForm() {
   return `
+  <div class="page-title">📦 Input Surplus Makanan (FR-02)</div>
   <div class="card">
-    <h2>📦 Input Surplus Makanan (FR-02)</h2>
     <form data-action="1" data-endpoint="/api/food" data-multipart="1">
       <label>Nama Surplus</label>
       <input name="name" required placeholder="Buffet sarapan sisa" />
@@ -453,10 +647,10 @@ function renderDonorForm() {
         <div><label>Expiry Time</label><input name="expiry_at" type="datetime-local" required /></div>
       </div>
       <div class="grid grid-2">
-        <div><label>Latitude (opsional)</label><input name="lat" type="number" step="any" placeholder="-6.2247" /></div>
-        <div><label>Longitude (opsional)</label><input name="lng" type="number" step="any" placeholder="106.8296" /></div>
+        <div><label>Latitude (Madura)</label><input name="lat" type="number" step="any" placeholder="-7.03" /></div>
+        <div><label>Longitude (Madura)</label><input name="lng" type="number" step="any" placeholder="112.74" /></div>
       </div>
-      <label>Foto Kondisi Makanan</label>
+      <label>Foto Kondisi Makanan (opsional, max 1MB)</label>
       <input name="photo" type="file" accept="image/*" />
       <button class="btn" type="submit">Simpan Surplus</button>
     </form>
@@ -466,9 +660,9 @@ function renderDonorForm() {
 async function renderDonorListings() {
   const rows = await api('/api/food');
   return `
+  <div class="page-title">📋 Listing Surplus Saya</div>
   <div class="card">
-    <h2>Daftar Listing Saya</h2>
-    ${rows.length === 0 ? '<div class="empty">Belum ada listing</div>' : `
+    ${rows.length === 0 ? '<div class="empty">Belum ada listing. Input surplus terlebih dahulu.</div>' : `
     <table>
       <tr><th>Foto</th><th>Nama</th><th>Porsi</th><th>Expiry</th><th>Status</th><th>Aksi</th></tr>
       ${rows.map(l => `
@@ -487,9 +681,9 @@ async function renderDonorListings() {
 async function renderDonorMatches() {
   const rows = await api('/api/matches');
   return `
+  <div class="page-title">🔗 Match Surplus Saya</div>
   <div class="card">
-    <h2>Match Surplus Saya</h2>
-    ${rows.length === 0 ? '<div class="empty">Belum ada match — tunggu admin menjalankan AI Matching</div>' : `
+    ${rows.length === 0 ? '<div class="empty">Belum ada match — tunggu admin menjalankan AI Matching.</div>' : `
     <table>
       <tr><th>Surplus</th><th>Penerima</th><th>Kurir</th><th>Skor</th><th>Status</th></tr>
       ${rows.map(m => `
@@ -507,11 +701,11 @@ async function renderDonorMatches() {
 async function renderRecipientForm() {
   const needsList = await renderRecipientNeedsList();
   return `
+  <div class="page-title">🙏 Kebutuhan Pangan (FR-03)</div>
   <div class="card">
-    <h2>🙏 Update Kebutuhan Pangan (FR-03)</h2>
     <form data-action="1" data-endpoint="/api/needs">
       <label>Judul Kebutuhan</label>
-      <input name="title" required placeholder="Makan malam anak yatim" />
+      <input name="title" required placeholder="Makan malam warga prasejahtera" />
       <div class="grid grid-2">
         <div><label>Porsi Dibutuhkan</label><input name="portions_needed" type="number" min="1" required /></div>
         <div>
@@ -527,8 +721,8 @@ async function renderRecipientForm() {
       <label>Catatan</label>
       <textarea name="note" rows="2"></textarea>
       <div class="grid grid-2">
-        <div><label>Latitude lokasi (opsional)</label><input name="lat" type="number" step="any" /></div>
-        <div><label>Longitude lokasi (opsional)</label><input name="lng" type="number" step="any" /></div>
+        <div><label>Latitude (Madura)</label><input name="lat" type="number" step="any" placeholder="-7.16" /></div>
+        <div><label>Longitude (Madura)</label><input name="lng" type="number" step="any" placeholder="113.48" /></div>
       </div>
       <button class="btn" type="submit">Simpan Kebutuhan</button>
     </form>
@@ -541,7 +735,7 @@ async function renderRecipientNeedsList() {
   return `
   <div class="card">
     <h2>Kebutuhan Saya</h2>
-    ${rows.length === 0 ? '<div class="empty">Belum ada kebutuhan</div>' : `
+    ${rows.length === 0 ? '<div class="empty">Belum ada kebutuhan tercatat.</div>' : `
     <table>
       <tr><th>Judul</th><th>Porsi</th><th>Urgensi</th><th>Status</th><th>Aksi</th></tr>
       ${rows.map(n => `
@@ -560,10 +754,11 @@ async function renderRecipientMatches() {
   const rows = await api('/api/matches');
   const ready = rows.filter((m) => ['picked_up', 'delivered'].includes(m.status));
   return `
+  <div class="page-title">🔐 Konfirmasi Penerimaan via OTP (FR-08)</div>
   <div class="card">
-    <h2>🔐 Konfirmasi Penerimaan via OTP (FR-08)</h2>
-    ${ready.length === 0 ? '<div class="empty">Belum ada kiriman menunggu konfirmasi OTP</div>' : ready.map((m) => `
-      <div class="notif">
+    <h2>Menunggu Konfirmasi</h2>
+    ${ready.length === 0 ? '<div class="empty">Belum ada kiriman menunggu konfirmasi OTP.</div>' : ready.map((m) => `
+      <div class="notif unread">
         <div class="spread">
           <div>
             <b>${esc(m.listing_name)}</b> — ${m.portions} porsi<br>
@@ -572,14 +767,13 @@ async function renderRecipientMatches() {
         </div>
         <div class="row" style="margin-top:10px">
           <input style="max-width:180px;margin:0" id="otp-${m.id}" placeholder="Masukkan 6 digit OTP" maxlength="6" />
-          <button class="btn btn-sm" id="verify-${m.id}" data-match="${m.id}">Konfirmasi Terima</button>
+          <button class="btn btn-sm" type="button" id="verifyBtn-${m.id}" data-verify="${m.id}">Konfirmasi Terima</button>
         </div>
-        <p class="muted" style="margin-top:6px">OTP dikirim via notifikasi (demo simulasi WhatsApp Gateway)</p>
       </div>`).join('')}
   </div>
   <div class="card">
     <h2>Riwayat Kiriman</h2>
-    ${rows.length === 0 ? '<div class="empty">Belum ada kiriman</div>' : `
+    ${rows.length === 0 ? '<div class="empty">Belum ada kiriman.</div>' : `
     <table>
       <tr><th>Surplus</th><th>Donor</th><th>Kurir</th><th>Status</th></tr>
       ${rows.map(m => `<tr><td>${esc(m.listing_name)}</td><td>${esc(m.donor_name)}</td><td>${esc(m.courier_name)}</td><td>${statusTag(m.status)}</td></tr>`).join('')}
@@ -591,8 +785,9 @@ async function renderCourier() {
   const rows = await api('/api/matches');
   const active = rows.filter((m) => ['proposed', 'accepted', 'picked_up', 'delivered'].includes(m.status));
   return `
+  <div class="page-title">🚚 Tugas Kurir (FR-05 · FR-07 · FR-08)</div>
   <div class="card">
-    <h2>🚚 Tugas Aktif (FR-05 GIS · FR-07 Foto · FR-08 OTP)</h2>
+    <h2>Tugas Aktif</h2>
     ${active.length === 0 ? '<div class="empty">Belum ada tugas. Minta admin menjalankan AI Matching.</div>' : active.map((m) => {
       const route = m.route;
       return `
@@ -604,27 +799,22 @@ async function renderCourier() {
           </div>
           ${statusTag(m.status)}
         </div>
-
         ${route ? `
         <h3 style="margin-top:12px">📍 Rute GIS — total ${route.total_distance_km} km ± ${route.total_duration_min} menit</h3>
         ${route.waypoints.map((w) => `<div class="route-step">${esc(w.label)} <span class="muted">(${w.lat}, ${w.lng})</span></div>`).join('')}
         <p class="muted">Leg: ${route.legs.map((l) => `${l.from}→${l.to}: ${l.distance_km} km / ${l.duration_min} mnt`).join(' · ')}</p>
         ` : ''}
-
         <p class="muted">📞 Donor: ${esc(m.donor_phone || '-')} — ${esc(m.donor_address || '')}<br>
         📞 Penerima: ${esc(m.recipient_phone || '-')} — ${esc(m.recipient_address || '')}</p>
-
         <div class="row" style="margin-top:10px">
           ${['proposed', 'accepted'].includes(m.status) ? `
             <form id="pickup-${m.id}" data-action="1" data-endpoint="/api/deliveries/${m.id}/pickup" data-multipart="1">
-              <label>📷 Foto kondisi makanan (FR-07, wajib)</label>
+              <label>📷 Foto kondisi makanan (FR-07, wajib, max 1MB)</label>
               <input type="file" name="photo" accept="image/*" required style="margin:0" />
               <button class="btn btn-sm" type="submit" style="margin-top:8px">Upload &amp; Pickup</button>
             </form>
           ` : ''}
-          ${m.status === 'picked_up' ? `
-            <button class="btn btn-sm" data-post="/api/deliveries/${m.id}/deliver">Tandai Sampai di Lokasi</button>
-          ` : ''}
+          ${m.status === 'picked_up' ? `<button class="btn btn-sm" data-post="/api/deliveries/${m.id}/deliver">Tandai Sampai di Lokasi</button>` : ''}
           ${m.status === 'delivered' ? `<span class="muted">Menunggu penerima memasukkan OTP…</span>` : ''}
           ${m.photo_path ? `<img class="thumb" src="${m.photo_path}" alt="Foto serah terima" />` : ''}
         </div>
@@ -633,7 +823,7 @@ async function renderCourier() {
   </div>
   <div class="card">
     <h2>Riwayat Tugas</h2>
-    ${rows.length === 0 ? '<div class="empty">Belum ada riwayat</div>' : `
+    ${rows.length === 0 ? '<div class="empty">Belum ada riwayat.</div>' : `
     <table>
       <tr><th>#</th><th>Surplus</th><th>Penerima</th><th>Skor</th><th>Jarak</th><th>Status</th></tr>
       ${rows.map(m => `<tr><td>${m.id}</td><td>${esc(m.listing_name)}</td><td>${esc(m.recipient_name)}</td><td>${m.score_percent ?? ''}%</td><td>${m.distance_km} km</td><td>${statusTag(m.status)}</td></tr>`).join('')}
@@ -644,20 +834,49 @@ async function renderCourier() {
 async function renderNotif() {
   const rows = await api('/api/notifications');
   return `
+  <div class="page-title">🔔 Notifikasi (FR-06)</div>
   <div class="card">
     <div class="spread">
-      <h2>🔔 Notifikasi Real-time (FR-06)</h2>
+      <h2 style="margin:0">Inbox</h2>
       <button class="btn btn-outline btn-sm" data-post="/api/notifications/read-all">Tandai semua dibaca</button>
     </div>
-    ${rows.length === 0 ? '<div class="empty">Belum ada notifikasi</div>' : rows.map((n) => `
+    <div style="margin-top:12px">
+    ${rows.length === 0 ? '<div class="empty">Belum ada notifikasi.</div>' : rows.map((n) => `
       <div class="notif ${n.read_at ? '' : 'unread'}">
         <b>${esc(n.title)}</b>
         <p>${esc(n.message)}</p>
         <span class="muted">${fmtDate(n.created_at)}</span>
         ${n.read_at ? '' : ` <button class="btn btn-sm btn-outline" data-post="/api/notifications/${n.id}/read">Tandai dibaca</button>`}
       </div>`).join('')}
+    </div>
   </div>`;
 }
+
+/* OTP verify buttons (khusus halaman penerima) */
+document.addEventListener('click', async (ev) => {
+  const btn = ev.target.closest('[data-verify]');
+  if (!btn) return;
+  const id = btn.dataset.verify;
+  const input = document.getElementById(`otp-${id}`);
+  if (!input || !input.value) {
+    toast('Masukkan OTP dulu', 'error');
+    return;
+  }
+  try {
+    const res = await api(`/api/deliveries/${id}/verify-otp`, {
+      method: 'POST',
+      body: { otp: input.value },
+    });
+    toast(res.message || 'Berhasil');
+    renderView();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+});
+
+/* Sidebar toggle */
+document.getElementById('menuToggle')?.addEventListener('click', openSidebar);
+document.getElementById('sidebarOverlay')?.addEventListener('click', closeSidebar);
 
 setInterval(async () => {
   if (!token || !me) return;

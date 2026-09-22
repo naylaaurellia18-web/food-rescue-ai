@@ -63,8 +63,8 @@ async function login(email, password) {
   fdListing.append('name', `Surplus Tes ${Date.now()}`);
   fdListing.append('portions', '30');
   fdListing.append('expiry_at', new Date(Date.now() + 4 * 3600000).toISOString());
-  fdListing.append('lat', '-6.2247');
-  fdListing.append('lng', '106.8296');
+  fdListing.append('lat', '-7.0288');
+  fdListing.append('lng', '112.7403');
   fdListing.append('photo', new Blob([png], { type: 'image/png' }), 'food.png');
   await api('/api/food', { method: 'POST', token: donor, form: fdListing });
 
@@ -75,8 +75,8 @@ async function login(email, password) {
       title: `Kebutuhan Tes ${Date.now()}`,
       portions_needed: 30,
       urgency: 'critical',
-      lat: -6.1929,
-      lng: 106.7618,
+      lat: -7.1567,
+      lng: 113.4833,
     },
   });
   console.log('✓ data listing & kebutuhan segar dibuat');

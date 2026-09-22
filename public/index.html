@@ -3,26 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Food Rescue AI</title>
+  <title>Food Rescue AI — Madura</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <div id="app">
-    <header class="topbar" id="topbar" hidden>
-      <div class="brand">🥗 Food Rescue AI</div>
-      <nav id="nav"></nav>
-      <div class="userbox">
-        <span id="userName"></span>
-        <span class="badge" id="userRole"></span>
-        <button class="btn btn-ghost" onclick="logout()">Logout</button>
-      </div>
-    </header>
+    <div id="authRoot"></div>
 
-    <main id="view"></main>
+    <div class="layout" id="appLayout" hidden>
+      <button class="menu-toggle" id="menuToggle" type="button" aria-label="Menu">☰</button>
+      <div class="overlay" id="sidebarOverlay"></div>
+
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">🥗 Food Rescue AI</div>
+        <nav class="sidebar-nav" id="nav"></nav>
+        <div class="sidebar-user">
+          <div class="name" id="userName"></div>
+          <span class="role" id="userRole"></span>
+          <div class="muted" style="color:#86efac" id="userStatus"></div>
+          <button class="btn-logout" type="button" onclick="logout()">Keluar</button>
+        </div>
+      </aside>
+
+      <main class="main" id="view"></main>
+    </div>
   </div>
 
   <div id="toast" class="toast" hidden></div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="/app.js"></script>
 </body>
 </html>

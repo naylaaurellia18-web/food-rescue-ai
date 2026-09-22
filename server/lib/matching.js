@@ -8,7 +8,7 @@ const WEIGHTS = {
 };
 
 const URGENCY_SCORE = { critical: 1.0, high: 0.75, medium: 0.5, low: 0.25 };
-const MAX_DISTANCE_KM = 30;
+const MAX_DISTANCE_KM = 80;
 
 function expiryScore(listing, now = Date.now()) {
   const expiry = new Date(listing.expiry_at).getTime();

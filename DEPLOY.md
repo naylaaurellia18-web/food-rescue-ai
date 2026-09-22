@@ -15,14 +15,14 @@ App otomatis pindah ke Turso jika env `TURSO_DATABASE_URL` terisi.
 
 ## 1. Buat Database Turso (gratis, ~2 menit)
 
-1. Buka **https://turso.tech** → **Sign up with GitHub**
-2. Dashboard → **Create Database**
+1. Buka **https://app.turso.tech** → **Sign in with GitHub**
+2. Klik **Create Database**
    - Name: `food-rescue-ai`
    - Region: `ap-southeast-1` (Singapore) atau terdekat
-3. Buka halaman database → tab **Connect**
+3. Buka database → tab **Connect** / **Tokens**
 4. Catat dua nilai ini:
    - **URL** → `libsql://food-rescue-ai-xxx.turso.io`
-   - **Auth token** → string panjang `eyJ...`
+   - **Auth token** → string panjang `eyJ...` (kalau belum ada, klik **Create token** dulu)
 
 Atau pakai CLI (opsional):
 ```bash
@@ -85,9 +85,38 @@ npm run test:e2e
 | Role | Email | Password |
 |------|-------|----------|
 | Admin | admin@foodrescue.id | admin123 |
-| Donor | donor@foodrescue.id | donor123 |
-| Penerima | penerima@foodrescue.id | penerima123 |
-| Kurir | kurir@foodrescue.id | kurir123 |
+
+> Mode **fresh** (default): hanya admin — web kosong, belum ada donor/listing/match.  
+> Mode **full demo** (lokal): `npm run seed -- --force --full` — isi akun donor/penerima/kurir + contoh data di **Madura**.
+
+---
+
+## 🗑️ Reset Total di Turso (web jadi baru / belum pernah diisi)
+
+1. Buka **https://app.turso.tech** → pilih database `food-rescue-ai`
+2. Buka tab **SQL** / **Console**
+3. Salin **seluruh isi** file [`server/reset-turso.sql`](./server/reset-turso.sql) → **Run**
+4. Hasil query terakhir harus `0` di semua kolom
+5. Buka URL Vercel sekali (`/api/health`) atau **Redeploy** → app auto-seed **hanya admin**
+6. Selesai — web fresh, siap diisi dari nol (fokus **Madura, Jawa Timur**)
+
+---
+
+## 🗺️ Peta GIS
+
+Menu sidebar **Peta GIS** memakai **Leaflet + OpenStreetMap** (gratis, tanpa API key):
+- Fokus peta: **Madura** (Bangkalan · Sampang · Pamekasan · Sumenep)
+- Marker: Donor (biru), Penerima (merah), Kurir (oranye), Surplus (hijau)
+- Polyline putus-putus: rute pengantaran hasil AI Matching
+
+Saat registrasi/input, isi **lat/lng** contoh Madura:
+
+| Wilayah | Latitude | Longitude |
+|---------|----------|-----------|
+| Bangkalan | -7.03 | 112.74 |
+| Sampang | -7.15 | 113.25 |
+| Pamekasan | -7.16 | 113.48 |
+| Sumenep | -6.99 | 113.83 |
 
 ---
 

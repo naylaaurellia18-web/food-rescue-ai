@@ -2,7 +2,12 @@ const db = require('./db');
 const { hashPassword } = require('./lib/auth');
 const { audit } = require('./lib/audit');
 
-async function seed({ force = false } = {}) {
+/**
+ * Seed default: HANYA admin (web fresh / belum pernah diisi).
+ * Lokasi admin: Bangkalan, Madura, Jawa Timur.
+ * Setelah seed, web kosong — belum ada donor/penerima/kurir/listing/kebutuhan/match.
+ */
+async function seed({ force = false, full = false } = {}) {
   await db.init();
   const existing = (await db.get('SELECT COUNT(*) AS c FROM users'))?.c ?? 0;
 
@@ -12,78 +17,120 @@ async function seed({ force = false } = {}) {
       return { skipped: true };
     }
     await db.exec(`
-      DELETE FROM otp_codes; DELETE FROM notifications; DELETE FROM audit_logs;
-      DELETE FROM matches; DELETE FROM food_listings; DELETE FROM food_needs; DELETE FROM users;
+      DROP TRIGGER IF EXISTS audit_logs_no_update;
+      DROP TRIGGER IF EXISTS audit_logs_no_delete;
+      DELETE FROM otp_codes;
+      DELETE FROM notifications;
+      DELETE FROM audit_logs;
+      DELETE FROM matches;
+      DELETE FROM food_listings;
+      DELETE FROM food_needs;
+      DELETE FROM users;
+      CREATE TRIGGER IF NOT EXISTS audit_logs_no_update
+      BEFORE UPDATE ON audit_logs
+      BEGIN
+        SELECT RAISE(ABORT, 'audit_logs is immutable');
+      END;
+      CREATE TRIGGER IF NOT EXISTS audit_logs_no_delete
+      BEFORE DELETE ON audit_logs
+      BEGIN
+        SELECT RAISE(ABORT, 'audit_logs is immutable');
+      END;
     `);
     try {
-      await db.exec(`DELETE FROM sqlite_sequence WHERE name IN ('users','food_listings','food_needs','matches','otp_codes','notifications','audit_logs')`);
+      await db.exec(
+        `DELETE FROM sqlite_sequence WHERE name IN ('users','food_listings','food_needs','matches','otp_codes','notifications','audit_logs')`
+      );
     } catch {
-      // cloud SQL without sqlite_sequence — ignore
+      /* cloud tanpa sqlite_sequence */
     }
   }
 
-  const users = [
-    ['Admin Sistem', 'admin@foodrescue.id', 'admin123', 'admin', 'active', '08110000000', 'Kantor Pusat', -6.2088, 106.8456, 'Food Rescue AI', null],
-    ['Hotel Melati', 'donor@foodrescue.id', 'donor123', 'donor', 'active', '08120000001', 'Jl. Sudirman No. 1, Jakarta Pusat', -6.2247, 106.8296, 'Hotel Melati', null],
-    ['Resto Nusantara', 'donor2@foodrescue.id', 'donor123', 'donor', 'active', '08120000002', 'Jl. Gatot Subroto No. 20, Jakarta Selatan', -6.2431, 106.8144, 'Resto Nusantara', null],
-    ['Panti Asuhan Kasih', 'penerima@foodrescue.id', 'penerima123', 'recipient', 'active', '08130000001', 'Jl. Kebon Jeruk No. 5, Jakarta Barat', -6.1929, 106.7618, 'Panti Asuhan Kasih', null],
-    ['Dapur Umum Sejahtera', 'penerima2@foodrescue.id', 'penerima123', 'recipient', 'active', '08130000002', 'Jl. Matraman No. 12, Jakarta Timur', -6.2018, 106.8578, 'Dapur Umum Sejahtera', null],
-    ['Kurir Budi', 'kurir@foodrescue.id', 'kurir123', 'courier', 'active', '08140000001', 'Beroperasi Jakarta', -6.2146, 106.8451, null, 60],
-    ['Kurir Siti', 'kurir2@foodrescue.id', 'kurir123', 'courier', 'active', '08140000002', 'Beroperasi Jakarta', -6.1754, 106.8651, null, 40],
-    ['Menunggu Verifikasi', 'pending@foodrescue.id', 'pending123', 'donor', 'pending', '08150000001', 'Belum lengkap', null, null, 'Cafe Uji Coba', null],
-  ];
+  // Selalu minimal: 1 admin (Madura)
+  await db.run(
+    `INSERT INTO users (name, email, password_hash, role, status, phone, address, lat, lng, org_name, capacity)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      'Admin Sistem',
+      'admin@foodrescue.id',
+      hashPassword('admin123'),
+      'admin',
+      'active',
+      '08110000000',
+      'Bangkalan, Madura, Jawa Timur',
+      -7.0288,
+      112.7403,
+      'Food Rescue AI',
+      null,
+    ]
+  );
 
-  for (const u of users) {
-    await db.run(
-      `INSERT INTO users (name, email, password_hash, role, status, phone, address, lat, lng, org_name, capacity)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [u[0], u[1], hashPassword(u[2]), u[3], u[4], u[5], u[6], u[7], u[8], u[9], u[10]]
-    );
+  if (full) {
+    const users = [
+      ['Hotel Madura', 'donor@foodrescue.id', 'donor123', 'donor', 'active', '08120000001', 'Jl. Raya Bangkalan, Madura', -7.0288, 112.7403, 'Hotel Madura', null],
+      ['Resto Sampang', 'donor2@foodrescue.id', 'donor123', 'donor', 'active', '08120000002', 'Jl. P. Diponegoro, Sampang', -7.1471, 113.2471, 'Resto Sampang', null],
+      ['Panti Asuhan Pamekasan', 'penerima@foodrescue.id', 'penerima123', 'recipient', 'active', '08130000001', 'Jl. Dr. Sutomo, Pamekasan', -7.1567, 113.4833, 'Panti Asuhan Pamekasan', null],
+      ['Dapur Umum Sumenep', 'penerima2@foodrescue.id', 'penerima123', 'recipient', 'active', '08130000002', 'Jl. Trunojoyo, Sumenep', -6.9898, 113.8333, 'Dapur Umum Sumenep', null],
+      ['Kurir Budi', 'kurir@foodrescue.id', 'kurir123', 'courier', 'active', '08140000001', 'Beroperasi Madura', -7.05, 113.25, null, 60],
+      ['Kurir Siti', 'kurir2@foodrescue.id', 'kurir123', 'courier', 'active', '08140000002', 'Beroperasi Madura', -7.15, 113.5, null, 40],
+      ['Menunggu Verifikasi', 'pending@foodrescue.id', 'pending123', 'donor', 'pending', '08150000001', 'Belum lengkap', null, null, 'Cafe Uji Coba', null],
+    ];
+    for (const u of users) {
+      await db.run(
+        `INSERT INTO users (name, email, password_hash, role, status, phone, address, lat, lng, org_name, capacity)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [u[0], u[1], hashPassword(u[2]), u[3], u[4], u[5], u[6], u[7], u[8], u[9], u[10]]
+      );
+    }
+
+    const inHours = (h) => new Date(Date.now() + h * 3600000).toISOString();
+    const listings = [
+      [2, 'Buffet Sarapan Sisa', 'Nasi, lauk pauk — masih layak konsumsi', 40, inHours(3), -7.0288, 112.7403, 'available'],
+      [2, 'Roti & Pastry', 'Roti sobek, croissant', 25, inHours(8), -7.0288, 112.7403, 'available'],
+      [3, 'Nasi Box Acara', 'Sisa katering — 30 box', 30, inHours(5), -7.1471, 113.2471, 'available'],
+      [3, 'Sayur & Buah Segar', 'Sayur mayur dan buah potong', 20, inHours(12), -7.1471, 113.2471, 'available'],
+    ];
+    for (const l of listings) {
+      await db.run(
+        `INSERT INTO food_listings (donor_id, name, description, portions, expiry_at, lat, lng, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        l
+      );
+    }
+
+    const needs = [
+      [4, 'Santapan Malam Anak Yatim', 35, 'critical', 'Pamekasan — 35 anak'],
+      [4, 'Camilan Sore', 15, 'low', 'Tambahan camilan sore'],
+      [5, 'Makan Siang Warga', 45, 'high', 'Sumenep — 45 porsi/hari'],
+      [5, 'Distribusi Mingguan', 20, 'medium', 'Cadangan stok mingguan'],
+    ];
+    for (const n of needs) {
+      await db.run(
+        `INSERT INTO food_needs (recipient_id, title, portions_needed, urgency, note, status)
+         VALUES (?, ?, ?, ?, ?, 'open')`,
+        n
+      );
+    }
   }
 
-  const inHours = (h) => new Date(Date.now() + h * 3600000).toISOString();
-  const listings = [
-    [2, 'Buffet Sarapan Sisa', 'Nasi, lauk pauk, sayur — masih hangat', 40, inHours(3), -6.2247, 106.8296, 'available'],
-    [2, 'Roti & Pastry', 'Roti sobek, croissant, kue lapis', 25, inHours(8), -6.2247, 106.8296, 'available'],
-    [3, 'Nasi Box Acara', 'Sisa katering rapat — 30 box lengkap', 30, inHours(5), -6.2431, 106.8144, 'available'],
-    [3, 'Sayur & Buah Segar', 'Sayur mayur dan buah potong', 20, inHours(12), -6.2431, 106.8144, 'available'],
-  ];
-  for (const l of listings) {
-    await db.run(
-      `INSERT INTO food_listings (donor_id, name, description, portions, expiry_at, lat, lng, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      l
-    );
-  }
+  await audit(1, 'SEED_DATABASE', 'system', null, { mode: full ? 'full-demo' : 'fresh-admin-only' });
 
-  const needs = [
-    [4, 'Santapan Malam Anak Yatim', 35, 'critical', 'Kekurangan makan malam untuk 35 anak'],
-    [4, 'Camilan Sore', 15, 'low', 'Tambahan camilan sore'],
-    [5, 'Makan Siang Warga Prasejahtera', 45, 'high', 'Dapur umum melayani 45 porsi/hari'],
-    [5, 'Distribusi Pangan Mingguan', 20, 'medium', 'Cadangan stok mingguan'],
-  ];
-  for (const n of needs) {
-    await db.run(
-      `INSERT INTO food_needs (recipient_id, title, portions_needed, urgency, note, status)
-       VALUES (?, ?, ?, ?, ?, 'open')`,
-      n
-    );
-  }
-
-  await audit(1, 'SEED_DATABASE', 'system', null, { users: users.length, listings: 4, needs: 4 });
-
-  console.log('Seed selesai. Akun demo:');
+  console.log(full ? 'Seed full demo (Madura) selesai.' : 'Seed fresh: hanya admin, data transaksi kosong.');
   console.log('  admin@foodrescue.id / admin123');
-  console.log('  donor@foodrescue.id / donor123');
-  console.log('  penerima@foodrescue.id / penerima123');
-  console.log('  kurir@foodrescue.id / kurir123');
+  if (full) {
+    console.log('  donor@foodrescue.id / donor123');
+    console.log('  penerima@foodrescue.id / penerima123');
+    console.log('  kurir@foodrescue.id / kurir123');
+  }
   return { ok: true };
 }
 
 module.exports = { seed };
 
 if (require.main === module) {
-  seed({ force: process.argv.includes('--force') })
+  const force = process.argv.includes('--force');
+  const full = process.argv.includes('--full');
+  seed({ force, full })
     .then(() => process.exit(0))
     .catch((e) => {
       console.error(e);
