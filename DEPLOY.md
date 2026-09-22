@@ -97,7 +97,7 @@ npm run test:e2e
 | Admin | admin@foodrescue.id | admin123 |
 
 > Mode **fresh** (default): hanya admin — web kosong, belum ada donor/listing/match.  
-> Mode **full demo** (lokal): `npm run seed -- --force --full` — isi akun donor/penerima/kurir + contoh data di **Madura**.
+> Mode **full demo** (lokal): `npm run seed -- --force --full` — isi akun donor/penerima/kurir + contoh data di **Madiun, Jawa Timur**.
 
 ---
 
@@ -108,25 +108,28 @@ npm run test:e2e
 3. Salin **seluruh isi** file [`server/reset-turso.sql`](./server/reset-turso.sql) → **Run**
 4. Hasil query terakhir harus `0` di semua kolom
 5. Buka URL Vercel sekali (`/api/health`) atau **Redeploy** → app auto-seed **hanya admin**
-6. Selesai — web fresh, siap diisi dari nol (fokus **Madura, Jawa Timur**)
+6. Selesai — web fresh, siap diisi dari nol (fokus **Madiun, Jawa Timur**)
 
 ---
 
 ## 🗺️ Peta GIS
 
 Menu sidebar **Peta GIS** memakai **Leaflet + OpenStreetMap** (gratis, tanpa API key):
-- Fokus peta: **Madura** (Bangkalan · Sampang · Pamekasan · Sumenep)
+- Fokus peta: **Madiun & sekitarnya** (Kota Madiun · Caruban · Mejayan · Balerejo · Ngawi · Magetan · Ponorogo)
 - Marker: Donor (biru), Penerima (merah), Kurir (oranye), Surplus (hijau)
 - Polyline putus-putus: rute pengantaran hasil AI Matching
 
-Saat registrasi/input, isi **lat/lng** contoh Madura:
+Saat registrasi/input, pilih lokasi dari dropdown (otomatis isi lat/lng):
 
 | Wilayah | Latitude | Longitude |
 |---------|----------|-----------|
-| Bangkalan | -7.03 | 112.74 |
-| Sampang | -7.15 | 113.25 |
-| Pamekasan | -7.16 | 113.48 |
-| Sumenep | -6.99 | 113.83 |
+| Kota Madiun | -7.62 | 111.53 |
+| Caruban | -7.55 | 111.64 |
+| Mejayan | -7.55 | 111.45 |
+| Balerejo | -7.55 | 111.56 |
+| Ngawi | -7.40 | 111.44 |
+| Magetan | -7.66 | 111.33 |
+| Ponorogo | -7.87 | 111.47 |
 
 ---
 

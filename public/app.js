@@ -5,25 +5,32 @@ let currentTab = '';
 let gisMap = null;
 let gisLayer = null;
 
-const MADURA_CENTER = [-7.05, 113.25];
-const MADURA_BOUNDS = [[-7.45, 112.5], [-6.7, 114.0]];
+const MADIUN_CENTER = [-7.63, 111.52];
+const MADIUN_BOUNDS = [[-7.95, 111.2], [-7.3, 111.8]];
 
 const LOCATIONS = [
-  { label: 'Bangkalan', lat: -7.0288, lng: 112.7403 },
-  { label: 'Sampang', lat: -7.1471, lng: 113.2471 },
-  { label: 'Pamekasan', lat: -7.1567, lng: 113.4833 },
-  { label: 'Sumenep', lat: -6.9898, lng: 113.8333 },
-  { label: 'Surabaya', lat: -7.2575, lng: 112.7521 },
-  { label: 'Sidoarjo', lat: -7.4478, lng: 112.7183 },
-  { label: 'Gresik', lat: -7.1566, lng: 112.6554 },
-  { label: 'Mojokerto', lat: -7.4704, lng: 112.4401 },
+  { label: 'Kota Madiun', lat: -7.6245, lng: 111.525 },
+  { label: 'Caruban (Madiun Kab.)', lat: -7.5494, lng: 111.6403 },
+  { label: 'Mejayan', lat: -7.5519, lng: 111.4536 },
+  { label: 'Balerejo', lat: -7.5483, lng: 111.5597 },
+  { label: 'Dagangan', lat: -7.6061, lng: 111.6244 },
+  { label: 'Dolopo', lat: -7.7503, lng: 111.55 },
+  { label: 'Geger', lat: -7.7225, lng: 111.4683 },
+  { label: 'Saradan', lat: -7.5317, lng: 111.335 },
+  { label: 'Kartoharjo', lat: -7.6014, lng: 111.4844 },
+  { label: 'Taman', lat: -7.6503, lng: 111.5172 },
+  { label: 'Wungu', lat: -7.6833, lng: 111.5167 },
+  { label: 'Sawahan', lat: -7.5267, lng: 111.4697 },
+  { label: 'Ngawi', lat: -7.4025, lng: 111.4414 },
+  { label: 'Magetan', lat: -7.6569, lng: 111.3303 },
+  { label: 'Ponorogo', lat: -7.8664, lng: 111.4667 },
 ];
 
 function locationSelectHtml(opts = {}) {
   const {
     label = 'Lokasi',
     required = false,
-    hint = 'Pilih kota/kabupaten, atau gunakan GPS di perangkat Anda',
+    hint = 'Pilih kecamatan/kota di sekitar Madiun, atau gunakan GPS di perangkat Anda',
   } = opts;
   return `
   <div class="loc-field">
@@ -652,7 +659,7 @@ async function renderGisMap() {
       <div class="stat accent"><div class="label">Rute aktif</div><div class="value">${activeMatches.length}</div></div>
     </div>
   </div>
-  <p class="muted">Lokasi diambil dari pilihan kota/GPS saat daftar dan saat catat surplus atau kebutuhan. Semakin akurat lokasi, semakin tepat jarak &amp; rute AI Matching.</p>`;
+  <p class="muted">Lokasi diambil dari pilihan kecamatan/kota di sekitar <b>Madiun, Jawa Timur</b> (atau GPS) saat daftar dan saat catat surplus/kebutuhan. Semakin akurat lokasi, semakin tepat jarak &amp; rute AI Matching.</p>`;
 }
 
 function initGisMap() {
@@ -660,7 +667,7 @@ function initGisMap() {
   if (!el || typeof L === 'undefined') return;
 
   destroyMap();
-  gisMap = L.map('gisMap', { zoomControl: true }).setView(MADURA_CENTER, 9);
+  gisMap = L.map('gisMap', { zoomControl: true }).setView(MADIUN_CENTER, 11);
   gisLayer = L.layerGroup().addTo(gisMap);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -668,7 +675,7 @@ function initGisMap() {
     attribution: '&copy; OpenStreetMap',
   }).addTo(gisMap);
 
-  gisMap.fitBounds(MADURA_BOUNDS);
+  gisMap.fitBounds(MADIUN_BOUNDS);
 
   loadMapData().catch((e) => toast(e.message, 'error'));
 
@@ -793,7 +800,7 @@ function renderAuth() {
         </form>
         <form id="formReg" hidden data-action="1" data-endpoint="/api/auth/register">
           <label>Nama / Nama Organisasi</label>
-          <input name="name" required placeholder="Masjid Jami' Bangkalan" />
+          <input name="name" required placeholder="Masjid Jami' Kota Madiun" />
           <label>Email</label>
           <input name="email" type="email" required autocomplete="email" />
           <label>Kata Sandi</label>
