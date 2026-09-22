@@ -2,52 +2,83 @@ const db = require('./db');
 const { hashPassword } = require('./lib/auth');
 const { audit } = require('./lib/audit');
 
+const AUDIT_TRIGGERS = `
+  CREATE TRIGGER IF NOT EXISTS audit_logs_no_update
+  BEFORE UPDATE ON audit_logs
+  BEGIN
+    SELECT RAISE(ABORT, 'audit_logs is immutable');
+  END;
+  CREATE TRIGGER IF NOT EXISTS audit_logs_no_delete
+  BEFORE DELETE ON audit_logs
+  BEGIN
+    SELECT RAISE(ABORT, 'audit_logs is immutable');
+  END;
+`;
+
+const DEMO_USERS = [
+  ['Hotel Merdeka Madiun', 'donor@foodrescue.id', 'donor123', 'donor', 'active', '08120000001', 'Jl. Pahlawan No. 53, Kota Madiun', -7.6245, 111.525, 'Hotel Merdeka Madiun', null],
+  ['Rumah Makan Padang Madiun', 'donor2@foodrescue.id', 'donor123', 'donor', 'active', '08120000002', 'Jl. Mayjen Bambang Soebianto, Kota Madiun', -7.638, 111.535, 'RM Padang Madiun', null],
+  ['Panti Asuhan Yatim Madiun', 'penerima@foodrescue.id', 'penerima123', 'recipient', 'active', '08130000001', 'Jl. Diponegoro, Kota Madiun', -7.615, 111.515, 'Panti Asuhan Yatim Madiun', null],
+  ['Dapur Umum Caruban', 'penerima2@foodrescue.id', 'penerima123', 'recipient', 'active', '08130000002', 'Jl. Raya Caruban, Madiun', -7.5494, 111.6403, 'Dapur Umum Caruban', null],
+  ['Kurir Budi', 'kurir@foodrescue.id', 'kurir123', 'courier', 'active', '08140000001', 'Beroperasi Kota Madiun', -7.63, 111.52, null, 60],
+  ['Kurir Siti', 'kurir2@foodrescue.id', 'kurir123', 'courier', 'active', '08140000002', 'Beroperasi Madiun sekitarnya', -7.58, 111.55, null, 40],
+  ['Menunggu Verifikasi', 'pending@foodrescue.id', 'pending123', 'donor', 'pending', '08150000001', 'Belum lengkap', null, null, 'Cafe Uji Coba Madiun', null],
+];
+
+async function wipeTransactional({ keepUsers = false } = {}) {
+  await db.exec(`
+    DROP TRIGGER IF EXISTS audit_logs_no_update;
+    DROP TRIGGER IF EXISTS audit_logs_no_delete;
+    DELETE FROM otp_codes;
+    DELETE FROM notifications;
+    DELETE FROM message_outbox;
+    DELETE FROM audit_logs;
+    DELETE FROM matches;
+    DELETE FROM food_listings;
+    DELETE FROM food_needs;
+    ${keepUsers ? '' : 'DELETE FROM users;'}
+    ${AUDIT_TRIGGERS}
+  `);
+  try {
+    await db.exec(
+      keepUsers
+        ? `DELETE FROM sqlite_sequence WHERE name IN ('food_listings','food_needs','matches','otp_codes','notifications','message_outbox','audit_logs')`
+        : `DELETE FROM sqlite_sequence WHERE name IN ('users','food_listings','food_needs','matches','otp_codes','notifications','message_outbox','audit_logs')`
+    );
+  } catch {
+    /* cloud tanpa sqlite_sequence */
+  }
+}
+
 /**
- * Seed default: HANYA admin (web fresh / belum pernah diisi).
- * Lokasi admin: Kota Madiun, Jawa Timur.
- * Setelah seed, web kosong — belum ada donor/penerima/kurir/listing/kebutuhan/match.
+ * Seed default: HANYA admin (web fresh).
+ * Lokasi: Kota Madiun, Jawa Timur.
+ *
+ * --force --full      : reset total + akun demo + listing/kebutuhan
+ * --force --accounts  : reset total + HANYA akun login (tanpa listing/match) — data bersih
+ * --clean             : hapus data transaksi (listing, need, match, notif, audit) — akun tetap
  */
-async function seed({ force = false, full = false } = {}) {
+async function seed({ force = false, full = false, clean = false, accounts = false } = {}) {
   await db.init();
+
+  if (clean) {
+    await wipeTransactional({ keepUsers: true });
+    const users = (await db.get('SELECT COUNT(*) AS c FROM users'))?.c ?? 0;
+    console.log(`Bersih: listing/kebutuhan/match/notifikasi/audit dihapus. Akun login tersisa: ${users}.`);
+    return { ok: true, cleaned: true, users };
+  }
+
   const existing = (await db.get('SELECT COUNT(*) AS c FROM users'))?.c ?? 0;
+  const wantAccountsOnly = accounts || (!full && force);
 
   if (existing > 0) {
     if (!force) {
-      console.log('Database sudah berisi data. Gunakan force=true untuk reset.');
+      console.log('Database sudah berisi data. Pakai --force --accounts (akun saja) atau --clean (hapus data, akun tetap).');
       return { skipped: true };
     }
-    await db.exec(`
-      DROP TRIGGER IF EXISTS audit_logs_no_update;
-      DROP TRIGGER IF EXISTS audit_logs_no_delete;
-      DELETE FROM otp_codes;
-      DELETE FROM notifications;
-      DELETE FROM message_outbox;
-      DELETE FROM audit_logs;
-      DELETE FROM matches;
-      DELETE FROM food_listings;
-      DELETE FROM food_needs;
-      DELETE FROM users;
-      CREATE TRIGGER IF NOT EXISTS audit_logs_no_update
-      BEFORE UPDATE ON audit_logs
-      BEGIN
-        SELECT RAISE(ABORT, 'audit_logs is immutable');
-      END;
-      CREATE TRIGGER IF NOT EXISTS audit_logs_no_delete
-      BEFORE DELETE ON audit_logs
-      BEGIN
-        SELECT RAISE(ABORT, 'audit_logs is immutable');
-      END;
-    `);
-    try {
-      await db.exec(
-        `DELETE FROM sqlite_sequence WHERE name IN ('users','food_listings','food_needs','matches','otp_codes','notifications','message_outbox','audit_logs')`
-      );
-    } catch {
-      /* cloud tanpa sqlite_sequence */
-    }
+    await wipeTransactional({ keepUsers: false });
   }
 
-  // Selalu minimal: 1 admin (Madiun)
   await db.run(
     `INSERT INTO users (name, email, password_hash, role, status, phone, address, lat, lng, org_name, capacity)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -66,25 +97,18 @@ async function seed({ force = false, full = false } = {}) {
     ]
   );
 
-  if (full) {
-    // Semua di sekitar Madiun, Jawa Timur — koordinat valid untuk demo matching
-    const users = [
-      ['Hotel Merdeka Madiun', 'donor@foodrescue.id', 'donor123', 'donor', 'active', '08120000001', 'Jl. Pahlawan No. 53, Kota Madiun', -7.6245, 111.525, 'Hotel Merdeka Madiun', null],
-      ['Rumah Makan Padang Madiun', 'donor2@foodrescue.id', 'donor123', 'donor', 'active', '08120000002', 'Jl. Mayjen Bambang Soebianto, Kota Madiun', -7.638, 111.535, 'RM Padang Madiun', null],
-      ['Panti Asuhan Yatim Madiun', 'penerima@foodrescue.id', 'penerima123', 'recipient', 'active', '08130000001', 'Jl. Diponegoro, Kota Madiun', -7.615, 111.515, 'Panti Asuhan Yatim Madiun', null],
-      ['Dapur Umum Caruban', 'penerima2@foodrescue.id', 'penerima123', 'recipient', 'active', '08130000002', 'Jl. Raya Caruban, Madiun', -7.5494, 111.6403, 'Dapur Umum Caruban', null],
-      ['Kurir Budi', 'kurir@foodrescue.id', 'kurir123', 'courier', 'active', '08140000001', 'Beroperasi Kota Madiun', -7.63, 111.52, null, 60],
-      ['Kurir Siti', 'kurir2@foodrescue.id', 'kurir123', 'courier', 'active', '08140000002', 'Beroperasi Madiun sekitarnya', -7.58, 111.55, null, 40],
-      ['Menunggu Verifikasi', 'pending@foodrescue.id', 'pending123', 'donor', 'pending', '08150000001', 'Belum lengkap', null, null, 'Cafe Uji Coba Madiun', null],
-    ];
-    for (const u of users) {
+  const seedAccounts = full || wantAccountsOnly;
+  if (seedAccounts) {
+    for (const u of DEMO_USERS) {
       await db.run(
         `INSERT INTO users (name, email, password_hash, role, status, phone, address, lat, lng, org_name, capacity)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [u[0], u[1], hashPassword(u[2]), u[3], u[4], u[5], u[6], u[7], u[8], u[9], u[10]]
       );
     }
+  }
 
+  if (full) {
     const inHours = (h) => new Date(Date.now() + h * 3600000).toISOString();
     const listings = [
       [2, 'Buffet Sarapan Sisa', 'Nasi, lauk pauk — masih layak konsumsi', 'wet', 40, inHours(3), -7.6245, 111.525, 'available'],
@@ -116,11 +140,19 @@ async function seed({ force = false, full = false } = {}) {
     }
   }
 
-  await audit(1, 'SEED_DATABASE', 'system', null, { mode: full ? 'full-demo' : 'fresh-admin-only' });
+  await audit(1, 'SEED_DATABASE', 'system', null, {
+    mode: full ? 'full-demo' : wantAccountsOnly ? 'accounts-only' : 'fresh-admin-only',
+  });
 
-  console.log(full ? 'Seed demo lengkap selesai.' : 'Seed fresh: hanya admin, data transaksi kosong.');
-  console.log('  admin@foodrescue.id / admin123');
   if (full) {
+    console.log('Seed demo lengkap selesai (akun + listing + kebutuhan).');
+  } else if (wantAccountsOnly) {
+    console.log('Seed akun login saja — listing/match kosong (siap diisi dari nol).');
+  } else {
+    console.log('Seed fresh: hanya admin, data transaksi kosong.');
+  }
+  console.log('  admin@foodrescue.id / admin123');
+  if (seedAccounts) {
     console.log('  donor@foodrescue.id / donor123');
     console.log('  penerima@foodrescue.id / penerima123');
     console.log('  kurir@foodrescue.id / kurir123');
@@ -128,12 +160,14 @@ async function seed({ force = false, full = false } = {}) {
   return { ok: true };
 }
 
-module.exports = { seed };
+module.exports = { seed, wipeTransactional };
 
 if (require.main === module) {
   const force = process.argv.includes('--force');
   const full = process.argv.includes('--full');
-  seed({ force, full })
+  const clean = process.argv.includes('--clean');
+  const accounts = process.argv.includes('--accounts');
+  seed({ force, full, clean, accounts })
     .then(() => process.exit(0))
     .catch((e) => {
       console.error(e);

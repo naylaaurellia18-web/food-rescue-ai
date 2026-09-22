@@ -97,18 +97,27 @@ npm run test:e2e
 | Admin | admin@foodrescue.id | admin123 |
 
 > Mode **fresh** (default): hanya admin — web kosong, belum ada donor/listing/match.  
-> Mode **full demo** (lokal): `npm run seed -- --force --full` — isi akun donor/penerima/kurir + contoh data di **Madiun, Jawa Timur**.
+> Mode **full demo** (lokal): `npm run seed -- --force --full` — akun + listing/kebutuhan contoh di **Madiun**.  
+> Mode **akun saja** (data bersih): `npm run seed:accounts` — hanya akun login, tanpa listing/match.  
+> **Bersihkan data, akun tetap**: `npm run clean` — hapus listing, kebutuhan, match, notifikasi, audit; akun login tidak dihapus.
 
 ---
 
-## 🗑️ Reset Total di Turso (web jadi baru / belum pernah diisi)
+## 🗑️ Reset di Turso
+
+Dua opsi di file [`server/reset-turso.sql`](./server/reset-turso.sql):
+
+- **OPSI A — bersihkan data, akun login tetap**: hapus listing/kebutuhan/match/OTP/notifikasi/outbox, tapi `DELETE FROM users` dikomentari → akun login tetap ada.
+- **OPSI B — reset total (web jadi baru)**: hapus semua termasuk users → web fresh, hanya admin saat auto-seed.
+
+Langkah:
 
 1. Buka **https://app.turso.tech** → pilih database `food-rescue-ai`
 2. Buka tab **SQL** / **Console**
-3. Salin **seluruh isi** file [`server/reset-turso.sql`](./server/reset-turso.sql) → **Run**
+3. Pilih opsi di file SQL (aktifkan baris yang diinginkan, komentari yang lain) → salin → **Run**
 4. Hasil query terakhir harus `0` di semua kolom
-5. Buka URL Vercel sekali (`/api/health`) atau **Redeploy** → app auto-seed **hanya admin**
-6. Selesai — web fresh, siap diisi dari nol (fokus **Madiun, Jawa Timur**)
+5. Buka URL Vercel sekali (`/api/health`) atau **Redeploy** → app auto-seed sesuai mode (OPSI B: hanya admin)
+6. Selesai — fokus **Madiun, Jawa Timur**, marker peta hanya di area Madiun
 
 ---
 

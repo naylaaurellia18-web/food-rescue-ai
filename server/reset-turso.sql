@@ -1,8 +1,12 @@
 -- ============================================
--- RESET TOTAL Food Rescue AI di Turso
+-- RESET DATA Food Rescue AI di Turso
 -- Jalankan di: app.turso.tech → database → SQL / Console
--- Setelah dijalankan, deploy ulang Vercel (atau akses /api/health)
--- untuk auto-seed ulang (hanya admin, data kosong).
+--
+-- OPSI A — Bersihkan data, AKUN LOGIN TETAP (disarankan):
+--   Hapus baris DELETE FROM users; di bawah
+--
+-- OPSI B — Reset total (akun ikut hilang, auto-seed ulang admin):
+--   Biarkan semua baris seperti adanya
 -- ============================================
 
 DROP TRIGGER IF EXISTS audit_logs_no_update;
@@ -15,6 +19,7 @@ DELETE FROM audit_logs;
 DELETE FROM matches;
 DELETE FROM food_listings;
 DELETE FROM food_needs;
+-- OPSI A: komentar baris berikut agar akun login dipertahankan
 DELETE FROM users;
 
 CREATE TRIGGER IF NOT EXISTS audit_logs_no_update
@@ -29,7 +34,7 @@ BEGIN
   SELECT RAISE(ABORT, 'audit_logs is immutable');
 END;
 
--- Verifikasi harus 0
+-- Verifikasi: listings/needs/matches/logs harus 0; users = akun tersisa
 SELECT
   (SELECT COUNT(*) FROM users) AS users,
   (SELECT COUNT(*) FROM food_listings) AS listings,

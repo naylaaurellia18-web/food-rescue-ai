@@ -11,6 +11,8 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "seed": "node server/seed.js",
+    "seed:accounts": "node server/seed.js --force --accounts",
+    "clean": "node server/seed.js --clean",
     "test:e2e": "node e2e-test.js"
   },
   "dependencies": {

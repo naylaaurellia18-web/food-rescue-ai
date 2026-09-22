@@ -20,8 +20,9 @@ Dibangun untuk tugas kuliah sesuai dokumen SKPL (10 FR + 8 NFR).
 
 ```bash
 npm install
-npm run seed        # data demo
-npm start           # http://localhost:3000
+npm run seed:accounts   # akun login saja (tanpa listing)
+npm run clean           # hapus data transaksi, akun tetap
+npm start               # http://localhost:3000
 ```
 
 Uji end-to-end otomatis:

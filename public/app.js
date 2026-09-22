@@ -8,6 +8,12 @@ let gisLayer = null;
 const MADIUN_CENTER = [-7.63, 111.52];
 const MADIUN_BOUNDS = [[-7.95, 111.2], [-7.3, 111.8]];
 
+function inMadiun(lat, lng) {
+  if (lat == null || lng == null) return false;
+  const [[s, w], [n, e]] = MADIUN_BOUNDS;
+  return lat >= s && lat <= n && lng >= w && lng <= e;
+}
+
 const LOCATIONS = [
   { label: 'Kota Madiun', lat: -7.6245, lng: 111.525 },
   { label: 'Caruban (Madiun Kab.)', lat: -7.5494, lng: 111.6403 },
@@ -659,7 +665,7 @@ async function renderGisMap() {
       <div class="stat accent"><div class="label">Rute aktif</div><div class="value">${activeMatches.length}</div></div>
     </div>
   </div>
-  <p class="muted">Lokasi diambil dari pilihan kecamatan/kota di sekitar <b>Madiun, Jawa Timur</b> (atau GPS) saat daftar dan saat catat surplus/kebutuhan. Semakin akurat lokasi, semakin tepat jarak &amp; rute AI Matching.</p>`;
+  <p class="muted">Marker peta hanya menampilkan lokasi di area <b>Madiun, Jawa Timur</b> (pilihan kecamatan/kota atau GPS). Semakin akurat lokasi, semakin tepat jarak &amp; rute AI Matching.</p>`;
 }
 
 function initGisMap() {
@@ -703,7 +709,7 @@ async function loadMapData() {
     });
 
   for (const u of users) {
-    if (u.lat == null || u.lng == null) continue;
+    if (!inMadiun(u.lat, u.lng)) continue;
     if (!['donor', 'recipient', 'courier'].includes(u.role)) continue;
     const colors = { donor: '#2563eb', recipient: '#dc2626', courier: '#f59e0b' };
     const roleLabel = { donor: 'Donor', recipient: 'Penerima', courier: 'Kurir' };
@@ -717,7 +723,7 @@ async function loadMapData() {
   }
 
   for (const l of listings) {
-    if (l.lat == null || l.lng == null) continue;
+    if (!inMadiun(l.lat, l.lng)) continue;
     if (!['available', 'matched'].includes(l.status)) continue;
     L.circleMarker([l.lat, l.lng], {
       radius: 7,
@@ -736,7 +742,7 @@ async function loadMapData() {
   for (const m of matches) {
     if (!m.route || m.status === 'cancelled') continue;
     const pts = (m.route.waypoints || [])
-      .filter((w) => w.lat != null && w.lng != null)
+      .filter((w) => inMadiun(w.lat, w.lng))
       .map((w) => [w.lat, w.lng]);
     if (pts.length < 2) continue;
 
