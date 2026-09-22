@@ -26,11 +26,11 @@ router.post('/', upload.single('photo'), async (req, res, next) => {
   try {
     const { name, description, portions, expiry_at, lat, lng, food_type } = req.body || {};
     if (!name || !portions || !expiry_at) {
-      return res.status(400).json({ error: 'name, portions, expiry_at wajib diisi' });
+      return res.status(400).json({ error: 'Nama, porsi, dan masa berlaku wajib diisi' });
     }
-    if (Number(portions) <= 0) return res.status(400).json({ error: 'Portions harus > 0' });
+    if (Number(portions) <= 0) return res.status(400).json({ error: 'Jumlah porsi harus lebih dari 0' });
     if (new Date(expiry_at).getTime() <= Date.now()) {
-      return res.status(400).json({ error: 'Expiry time harus di masa depan' });
+      return res.status(400).json({ error: 'Masa berlaku harus di masa depan' });
     }
     const ftype = food_type === 'dry' ? 'dry' : food_type === 'wet' ? 'wet' : 'wet';
 
@@ -73,7 +73,7 @@ router.get('/', async (req, res, next) => {
 router.patch('/:id/cancel', async (req, res, next) => {
   try {
     const listing = await db.get('SELECT * FROM food_listings WHERE id = ?', [req.params.id]);
-    if (!listing) return res.status(404).json({ error: 'Listing tidak ditemukan' });
+    if (!listing) return res.status(404).json({ error: 'Data surplus tidak ditemukan' });
     if (req.user.role !== 'admin' && listing.donor_id !== req.user.id) {
       return res.status(403).json({ error: 'Bukan milik Anda' });
     }
@@ -87,7 +87,7 @@ router.patch('/:id/cancel', async (req, res, next) => {
     );
     if (m) await db.run(`UPDATE matches SET status = 'cancelled', updated_at = datetime('now') WHERE id = ?`, [m.id]);
     await audit(req.user.id, 'CANCEL_LISTING', 'food_listings', listing.id);
-    res.json({ message: 'Listing dibatalkan' });
+    res.json({ message: 'Surplus dibatalkan' });
   } catch (e) {
     next(e);
   }

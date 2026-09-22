@@ -87,21 +87,22 @@ router.patch('/users/:id/status', async (req, res, next) => {
       return res.status(400).json({ error: 'Status tidak valid' });
     }
     const user = await db.get('SELECT * FROM users WHERE id = ?', [req.params.id]);
-    if (!user) return res.status(404).json({ error: 'User tidak ditemukan' });
+    if (!user) return res.status(404).json({ error: 'Pengguna tidak ditemukan' });
     if (user.role === 'admin' && status !== 'active') {
       return res.status(400).json({ error: 'Admin tidak bisa diubah statusnya' });
     }
 
     await db.run('UPDATE users SET status = ? WHERE id = ?', [status, user.id]);
     await audit(req.user.id, 'UPDATE_USER_STATUS', 'users', user.id, { from: user.status, to: status });
+    const statusLabel = { active: 'aktif', rejected: 'ditolak', pending: 'menunggu verifikasi' }[status] || status;
     await notify(
       user.id,
       status === 'active' ? 'Akun Diverifikasi' : 'Status Akun Diperbarui',
       status === 'active'
-        ? 'Akun Anda telah diverifikasi. Anda bisa login dan menggunakan aplikasi.'
-        : `Status akun Anda: ${status}. Hubungi admin untuk info lebih lanjut.`
+        ? 'Akun Anda telah diverifikasi. Anda bisa masuk dan menggunakan aplikasi.'
+        : `Status akun Anda: ${statusLabel}. Hubungi admin untuk info lebih lanjut.`
     );
-    res.json({ message: `Status user menjadi ${status}` });
+    res.json({ message: `Status pengguna menjadi ${statusLabel}` });
   } catch (e) {
     next(e);
   }
@@ -110,7 +111,7 @@ router.patch('/users/:id/status', async (req, res, next) => {
 router.delete('/users/:id', async (req, res, next) => {
   try {
     const user = await db.get('SELECT * FROM users WHERE id = ?', [req.params.id]);
-    if (!user) return res.status(404).json({ error: 'User tidak ditemukan' });
+    if (!user) return res.status(404).json({ error: 'Pengguna tidak ditemukan' });
     if (user.role === 'admin') return res.status(400).json({ error: 'Admin tidak bisa dihapus' });
 
     const activeMatch = await db.get(
@@ -121,12 +122,12 @@ router.delete('/users/:id', async (req, res, next) => {
       [user.id, user.id, user.id]
     );
     if (activeMatch.c > 0) {
-      return res.status(400).json({ error: 'User masih memiliki match aktif' });
+      return res.status(400).json({ error: 'Pengguna masih memiliki pencocokan aktif' });
     }
 
     await audit(req.user.id, 'DELETE_USER', 'users', user.id, { email: user.email, role: user.role });
     await db.run('DELETE FROM users WHERE id = ?', [user.id]);
-    res.json({ message: 'User dihapus' });
+    res.json({ message: 'Pengguna dihapus' });
   } catch (e) {
     next(e);
   }

@@ -9,13 +9,13 @@ router.post('/register', async (req, res, next) => {
   try {
     const { name, email, password, role, phone, address, lat, lng, org_name, capacity } = req.body || {};
     if (!name || !email || !password || !role) {
-      return res.status(400).json({ error: 'name, email, password, role wajib diisi' });
+      return res.status(400).json({ error: 'Nama, email, kata sandi, dan peran wajib diisi' });
     }
     if (!['donor', 'recipient', 'courier'].includes(role)) {
-      return res.status(400).json({ error: 'Role harus donor, recipient, atau courier' });
+      return res.status(400).json({ error: 'Peran harus donor, recipient, atau courier' });
     }
     if (password.length < 6) {
-      return res.status(400).json({ error: 'Password minimal 6 karakter' });
+      return res.status(400).json({ error: 'Kata sandi minimal 6 karakter' });
     }
 
     const exists = await db.get('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
@@ -51,11 +51,11 @@ router.post('/register', async (req, res, next) => {
 router.post('/login', async (req, res, next) => {
   try {
     const { email, password } = req.body || {};
-    if (!email || !password) return res.status(400).json({ error: 'Email dan password wajib diisi' });
+    if (!email || !password) return res.status(400).json({ error: 'Email dan kata sandi wajib diisi' });
 
     const user = await db.get('SELECT * FROM users WHERE email = ?', [String(email).toLowerCase()]);
     if (!user || !verifyPassword(password, user.password_hash)) {
-      return res.status(401).json({ error: 'Email atau password salah' });
+      return res.status(401).json({ error: 'Email atau kata sandi salah' });
     }
     if (user.status === 'rejected') {
       return res.status(403).json({ error: 'Akun ditolak oleh admin' });
@@ -87,7 +87,7 @@ router.get('/me', authenticate, async (req, res, next) => {
       'SELECT id, name, email, role, status, phone, address, lat, lng, org_name, capacity, created_at FROM users WHERE id = ?',
       [req.user.id]
     );
-    if (!user) return res.status(404).json({ error: 'User tidak ditemukan' });
+    if (!user) return res.status(404).json({ error: 'Pengguna tidak ditemukan' });
     res.json(user);
   } catch (e) {
     next(e);

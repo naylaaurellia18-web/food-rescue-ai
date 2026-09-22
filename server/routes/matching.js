@@ -69,13 +69,13 @@ async function runMatching(actorId) {
     await notify(
       m.courier_id,
       'Tugas Baru: Penjemputan Surplus',
-      `Surplus "${listing.name}" (${listing.portions} porsi) untuk "${need.title}". Skor match ${(m.score * 100).toFixed(0)}%, jarak ${m.distance_km} km.`,
+      `Surplus "${listing.name}" (${listing.portions} porsi) untuk "${need.title}". Skor pencocokan ${(m.score * 100).toFixed(0)}%, jarak ${m.distance_km} km.`,
       matchId
     );
     await notify(
       listing.donor_id,
-      'Surplus Anda Dimatch',
-      `"${listing.name}" dialokasikan untuk ${need.title}. Skor match ${(m.score * 100).toFixed(0)}%.`,
+      'Surplus Anda Sudah Dipasangkan',
+      `"${listing.name}" dialokasikan untuk ${need.title}. Skor pencocokan ${(m.score * 100).toFixed(0)}%.`,
       matchId
     );
     await notify(
@@ -112,7 +112,7 @@ router.use(authenticate);
 router.post('/run', requireRole('admin'), requireActive, async (req, res, next) => {
   try {
     const result = await runMatching(req.user.id);
-    res.json({ message: `Matching selesai: ${result.created} match dibuat`, ...result });
+    res.json({ message: `Pencocokan selesai: ${result.created} pencocokan dibuat`, ...result });
   } catch (e) {
     next(e);
   }
@@ -202,14 +202,14 @@ router.get('/:id', async (req, res, next) => {
        WHERE m.id = ?`,
       [req.params.id]
     );
-    if (!m) return res.status(404).json({ error: 'Match tidak ditemukan' });
+    if (!m) return res.status(404).json({ error: 'Pencocokan tidak ditemukan' });
 
     const isParticipant =
       req.user.role === 'admin' ||
       m.courier_id === req.user.id ||
       m.donor_id === req.user.id ||
       m.recipient_id === req.user.id;
-    if (!isParticipant) return res.status(403).json({ error: 'Bukan peserta match ini' });
+    if (!isParticipant) return res.status(403).json({ error: 'Bukan peserta pencocokan ini' });
 
     res.json({ ...m, route: m.route_json ? JSON.parse(m.route_json) : null });
   } catch (e) {

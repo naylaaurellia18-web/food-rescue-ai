@@ -11,10 +11,10 @@ router.post('/', async (req, res, next) => {
   try {
     const { title, portions_needed, urgency, note, lat, lng } = req.body || {};
     if (!title || !portions_needed) {
-      return res.status(400).json({ error: 'title dan portions_needed wajib diisi' });
+      return res.status(400).json({ error: 'Judul dan kebutuhan porsi wajib diisi' });
     }
     if (!['low', 'medium', 'high', 'critical'].includes(urgency || 'medium')) {
-      return res.status(400).json({ error: 'urgency tidak valid' });
+      return res.status(400).json({ error: 'Tingkat urgensi tidak valid' });
     }
 
     const recipient = await db.get('SELECT lat, lng FROM users WHERE id = ?', [req.user.id]);

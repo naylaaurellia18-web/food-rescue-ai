@@ -24,7 +24,7 @@ router.post('/:id/read', async (req, res, next) => {
       req.params.id,
       req.user.id,
     ]);
-    res.json({ message: 'OK' });
+    res.json({ message: 'Berhasil' });
   } catch (e) {
     next(e);
   }
@@ -35,7 +35,7 @@ router.post('/read-all', async (req, res, next) => {
     await db.run(`UPDATE notifications SET read_at = datetime('now') WHERE user_id = ? AND read_at IS NULL`, [
       req.user.id,
     ]);
-    res.json({ message: 'OK' });
+    res.json({ message: 'Berhasil' });
   } catch (e) {
     next(e);
   }

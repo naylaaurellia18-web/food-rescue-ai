@@ -116,7 +116,7 @@ async function seed({ force = false, full = false } = {}) {
 
   await audit(1, 'SEED_DATABASE', 'system', null, { mode: full ? 'full-demo' : 'fresh-admin-only' });
 
-  console.log(full ? 'Seed full demo (Madura) selesai.' : 'Seed fresh: hanya admin, data transaksi kosong.');
+  console.log(full ? 'Seed demo lengkap selesai.' : 'Seed fresh: hanya admin, data transaksi kosong.');
   console.log('  admin@foodrescue.id / admin123');
   if (full) {
     console.log('  donor@foodrescue.id / donor123');

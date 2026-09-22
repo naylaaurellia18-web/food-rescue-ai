@@ -37,12 +37,12 @@ function assertCourier(req, match) {
 router.post('/:id/pickup', upload.single('photo'), requireRole('courier', 'admin'), async (req, res, next) => {
   try {
     const match = await getMatch(req.params.id);
-    if (!match) return res.status(404).json({ error: 'Match tidak ditemukan' });
+    if (!match) return res.status(404).json({ error: 'Pencocokan tidak ditemukan' });
     assertCourier(req, match);
     if (!['proposed', 'accepted'].includes(match.status)) {
-      return res.status(400).json({ error: `Status ${match.status} tidak bisa di-pickup` });
+      return res.status(400).json({ error: `Status ${match.status} tidak bisa dijemput` });
     }
-    if (!req.file) return res.status(400).json({ error: 'Foto kondisi makanan wajib diupload' });
+    if (!req.file) return res.status(400).json({ error: 'Foto kondisi makanan wajib diunggah' });
 
     const photoUri = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
 
@@ -65,7 +65,7 @@ router.post('/:id/pickup', upload.single('photo'), requireRole('courier', 'admin
     await notify(match.donor_id, 'Surplus Dijemput Kurir', `"${match.listing_name}" sedang dalam perjalanan.`, match.id);
     await audit(req.user.id, 'PICKUP', 'matches', match.id, { photo: 'base64' });
 
-    res.json({ message: 'Pickup tercatat, OTP dikirim ke penerima', otp_hint: 'OTP tampil di notifikasi penerima (demo)' });
+    res.json({ message: 'Penjemputan tercatat, OTP dikirim ke penerima', otp_hint: 'OTP tampil di notifikasi penerima (demo)' });
   } catch (e) {
     next(e);
   }
@@ -74,10 +74,10 @@ router.post('/:id/pickup', upload.single('photo'), requireRole('courier', 'admin
 router.post('/:id/deliver', requireRole('courier', 'admin'), async (req, res, next) => {
   try {
     const match = await getMatch(req.params.id);
-    if (!match) return res.status(404).json({ error: 'Match tidak ditemukan' });
+    if (!match) return res.status(404).json({ error: 'Pencocokan tidak ditemukan' });
     assertCourier(req, match);
     if (match.status !== 'picked_up') {
-      return res.status(400).json({ error: 'Match harus berstatus picked_up' });
+      return res.status(400).json({ error: 'Pencocokan harus berstatus picked_up' });
     }
     await db.run(`UPDATE matches SET status = 'delivered', updated_at = datetime('now') WHERE id = ?`, [match.id]);
     await db.run(`UPDATE food_listings SET status = 'delivered' WHERE id = ?`, [match.listing_id]);
@@ -91,12 +91,12 @@ router.post('/:id/deliver', requireRole('courier', 'admin'), async (req, res, ne
 router.post('/:id/verify-otp', requireRole('recipient', 'admin'), async (req, res, next) => {
   try {
     const match = await getMatch(req.params.id);
-    if (!match) return res.status(404).json({ error: 'Match tidak ditemukan' });
+    if (!match) return res.status(404).json({ error: 'Pencocokan tidak ditemukan' });
     if (req.user.role !== 'admin' && match.recipient_id !== req.user.id) {
       return res.status(403).json({ error: 'Hanya penerima yang bisa konfirmasi' });
     }
     if (!['picked_up', 'delivered'].includes(match.status)) {
-      return res.status(400).json({ error: 'Match belum siap dikonfirmasi' });
+      return res.status(400).json({ error: 'Pencocokan belum siap dikonfirmasi' });
     }
 
     const { otp } = req.body || {};
@@ -122,7 +122,7 @@ router.post('/:id/verify-otp', requireRole('recipient', 'admin'), async (req, re
     await db.run(`UPDATE food_listings SET status = 'verified' WHERE id = ?`, [match.listing_id]);
     await db.run(`UPDATE food_needs SET status = 'fulfilled', updated_at = datetime('now') WHERE id = ?`, [match.need_id]);
 
-    await notify(match.courier_id, 'Serah Terima Terverifikasi', `Match #${match.id} selesai via OTP.`, match.id);
+    await notify(match.courier_id, 'Serah Terima Terverifikasi', `Pencocokan #${match.id} selesai via OTP.`, match.id);
     await notify(match.donor_id, 'Redistribusi Selesai', `"${match.listing_name}" telah diterima penerima.`, match.id);
     await audit(req.user.id, 'VERIFY_OTP', 'matches', match.id, { need_id: match.need_id });
 
@@ -135,9 +135,9 @@ router.post('/:id/verify-otp', requireRole('recipient', 'admin'), async (req, re
 router.get('/:id/otp-status', requireRole('recipient', 'admin'), async (req, res, next) => {
   try {
     const match = await getMatch(req.params.id);
-    if (!match) return res.status(404).json({ error: 'Match tidak ditemukan' });
+    if (!match) return res.status(404).json({ error: 'Pencocokan tidak ditemukan' });
     if (req.user.role !== 'admin' && match.recipient_id !== req.user.id) {
-      return res.status(403).json({ error: 'Bukan penerima match ini' });
+      return res.status(403).json({ error: 'Bukan penerima pencocokan ini' });
     }
     const row = await db.get(
       `SELECT code, expires_at, used_at FROM otp_codes WHERE match_id = ? ORDER BY created_at DESC LIMIT 1`,

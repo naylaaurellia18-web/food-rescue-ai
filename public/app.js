@@ -150,7 +150,7 @@ const SOP = {
           'Gunakan wadah food-grade tertutup rapat (container/box mika bersegel)',
           'Pisahkan makanan matang dan mentah — jangan dicampur',
           'Label wadah: nama makanan, jam masak/sisa, masa simpan, porsi',
-          'Bungkus with ice gel/cold pack bila suhu harus tetap dingin',
+          'Bungkus dengan ice gel/cold pack bila suhu harus tetap dingin',
           'Hindari kertas koran / wadah terbuka saat pengantaran',
         ],
       },
@@ -158,7 +158,7 @@ const SOP = {
         title: 'Penyimpanan',
         items: [
           'Suhu penyimpanan ≤ 5°C (chiller) atau ≤ -18°C (freezer) bila bisa',
-          'Bila tidak ada chiller: simpan di tempat paling dingin, maksimal 2 jam sebelum pickup',
+          'Bila tidak ada chiller: simpan di tempat paling dingin, maksimal 2 jam sebelum penjemputan',
           'Jangan simpan di bawah matahari / ruang panas dapur',
           'Simpan berdasarkan FEFO (First Expired, First Out)',
         ],
@@ -177,7 +177,7 @@ const SOP = {
           'Cuci tangan / pakai sarung tangan saat mengemas',
           'Dasar kendaraan bersih; makanan tidak bersentuhan langsung dengan lantai bagasi',
           'Antar langsung — tidak boleh ditinggal di dashboard panas',
-          'Foto kondisi makanan saat pickup sebagai bukti chain-of-custody',
+          'Foto kondisi makanan saat penjemputan sebagai bukti rantai penanganan',
         ],
       },
     ],
@@ -217,7 +217,7 @@ const SOP = {
         items: [
           'Kemas lapis luar bersih; jangan taruh di bagasi basah',
           'Pisahkan dari makanan basah saat dijadikan satu rute',
-          'Foto kemasan utuh saat pickup',
+          'Foto kemasan utuh saat penjemputan',
         ],
       },
     ],
@@ -675,7 +675,7 @@ function renderAuth() {
         <form id="formLogin" data-action="1" data-endpoint="/api/auth/login">
           <label>Email</label>
           <input name="email" type="email" required placeholder="nama@contoh.id" autocomplete="email" />
-          <label>Password</label>
+          <label>Kata Sandi</label>
           <input name="password" type="password" required placeholder="••••••••" autocomplete="current-password" />
           <button class="btn btn-block" type="submit">${icon('arrowRight', 15)} Masuk</button>
         </form>
@@ -684,7 +684,7 @@ function renderAuth() {
           <input name="name" required placeholder="Masjid Jami' Bangkalan" />
           <label>Email</label>
           <input name="email" type="email" required autocomplete="email" />
-          <label>Password</label>
+          <label>Kata Sandi</label>
           <input name="password" type="password" minlength="6" required autocomplete="new-password" />
           <label>Peran</label>
           <select name="role" required>
@@ -1228,7 +1228,7 @@ async function renderNotif() {
   return `
   ${pageHead(
     'Notifikasi',
-    'Pembaruan match, pickup, dan status serah terima',
+    'Pembaruan pencocokan, penjemputan, dan status serah terima',
     `<button class="btn btn-outline btn-sm" data-post="/api/notifications/read-all">${icon('check', 14)} Tandai semua dibaca</button>`
   )}
   <div class="card">
