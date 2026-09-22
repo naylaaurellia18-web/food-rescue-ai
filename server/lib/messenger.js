@@ -17,8 +17,27 @@ async function sendWhatsApp(phone, message) {
   const to = normalizePhone(phone);
   if (!to) return { ok: false, skipped: true, reason: 'nomor kosong' };
 
+  const callmebotKey = process.env.CALLMEBOT_APIKEY;
   const url = process.env.WHATSAPP_API_URL;
   const token = process.env.WHATSAPP_API_TOKEN;
+
+  if (callmebotKey) {
+    try {
+      const u = new URL('https://api.callmebot.com/whatsapp.php');
+      u.searchParams.set('phone', to);
+      u.searchParams.set('text', message);
+      u.searchParams.set('apikey', callmebotKey);
+      const res = await fetch(u, { signal: AbortSignal.timeout(8000) });
+      const text = await res.text().catch(() => '');
+      if (!res.ok) {
+        return { ok: false, simulated: false, to, error: `HTTP ${res.status}: ${text.slice(0, 200)}` };
+      }
+      return { ok: true, simulated: false, to, response: text.slice(0, 500) };
+    } catch (e) {
+      return { ok: false, simulated: false, to, error: e.message };
+    }
+  }
+
   if (!url) {
     return { ok: true, simulated: true, to };
   }

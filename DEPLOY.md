@@ -46,15 +46,18 @@ turso db tokens create food-rescue-ai
    | `TURSO_AUTH_TOKEN` | Auth token Turso |
    | `JWT_SECRET` | string acak panjang (bebas, mis. `rahasia-kuliah-2026-xxxx`) |
 
-   **Opsional — notifikasi nyata (tanpa env tetap jalan mode simulasi):**
+   **Notifikasi nyata (tanpa env tetap jalan mode simulasi):**
 
    | Key | Fungsi |
    |-----|--------|
-   | `WHATSAPP_API_URL` | Endpoint WhatsApp gateway (POST JSON) |
-   | `WHATSAPP_API_TOKEN` | Token API gateway |
-   | `SMTP_HOST` / `SMTP_PORT` | Mail server (mis. `smtp.gmail.com` / `587`) |
-   | `SMTP_USER` / `SMTP_PASS` | Akun SMTP |
-   | `MAIL_FROM` | Alamat pengirim |
+   | `CALLMEBOT_APIKEY` | **WhatsApp (CallMeBot, gratis)** — lihat langkah di bawah |
+   | `SMTP_HOST` | `smtp.gmail.com` (Gmail) |
+   | `SMTP_PORT` | `587` |
+   | `SMTP_USER` | Email Gmail pengirim (mis. `naylaaurellia910@gmail.com`) |
+   | `SMTP_PASS` | **App Password** Gmail (16 digit, bukan password login) |
+   | `MAIL_FROM` | `Food Rescue AI <naylaaurellia910@gmail.com>` |
+   | `NOTIFY_EMAIL` | Semua email notifikasi dikirim ke kotak masuk ini |
+   | `WHATSAPP_API_URL` / `WHATSAPP_API_TOKEN` | Alternatif gateway WA lain (jika tidak pakai CallMeBot) |
 
 5. **Build & Deploy** → tunggu 1–2 menit
 6. Dapat URL: `https://food-rescue-ai-xxx.vercel.app` 🎉
@@ -118,6 +121,49 @@ Langkah:
 4. Hasil query terakhir harus `0` di semua kolom
 5. Buka URL Vercel sekali (`/api/health`) atau **Redeploy** → app auto-seed sesuai mode (OPSI B: hanya admin)
 6. Selesai — fokus **Madiun, Jawa Timur**, marker peta hanya di area Madiun
+
+Setelah reset, isi ulang nomor WA semua akun (sekali jalan) di SQL console Turso:
+
+```sql
+UPDATE users SET phone = '083847721511';
+```
+
+---
+
+## 📲 Notifikasi Nyata (WhatsApp & Email)
+
+### 1. WhatsApp — CallMeBot (gratis)
+
+1. Buka **https://www.callmebot.com** → lihat nomor bot saat ini (contoh: `+34 611 01 16 37`)
+2. **Simpan nomor itu** di kontak HP Anda
+3. Dari WhatsApp HP Anda, kirim pesan: `I allow callmebot to send me messages`
+4. Tunggu balasan: `API Activated... Your APIKEY is 123456` → catat APIKEY-nya
+5. Isi env `CALLMEBOT_APIKEY=123456` (lokal: `.env` · online: Vercel → Environment Variables → Redeploy)
+
+> Semua akun demo sudah bernomor `083847721511` — notifikasi WA masuk ke HP Anda.
+
+### 2. Email — Gmail App Password
+
+1. Buka **https://myaccount.google.com** → **Keamanan**
+2. Aktifkan **Verifikasi 2 Langkah** (wajib sekali)
+3. Cari **App passwords** → buat baru, nama bebas (mis. `Food Rescue`) → dapat password 16 digit
+4. Isi env:
+
+   | Key | Value |
+   |-----|-------|
+   | `SMTP_HOST` | `smtp.gmail.com` |
+   | `SMTP_PORT` | `587` |
+   | `SMTP_USER` | `naylaaurellia910@gmail.com` |
+   | `SMTP_PASS` | app password 16 digit |
+   | `MAIL_FROM` | `Food Rescue AI <naylaaurellia910@gmail.com>` |
+   | `NOTIFY_EMAIL` | `naylaaurellia910@gmail.com` |
+
+5. Redeploy (Vercel) atau restart `npm start` (lokal)
+
+### 3. Cek status
+
+Dashboard admin → kartu **Pesan outbox** menampilkan `WA aktif` / `Email aktif` bila env sudah terisi.
+Menu **Pesan Terkirim** menampilkan status tiap pesan (`sent` = nyata, `simulated` = demo, `failed` = gagal + alasan).
 
 ---
 

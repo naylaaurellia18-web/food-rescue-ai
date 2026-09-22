@@ -126,8 +126,9 @@ Setiap `notify()` in-app otomatis di-fanout ke:
 
 | Kanal | Env | Tanpa env |
 |-------|-----|-----------|
-| WhatsApp Gateway | `WHATSAPP_API_URL`, `WHATSAPP_API_TOKEN` | mode **simulasi** (tersimpan di outbox) |
-| Mail Server (SMTP) | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | mode **simulasi** |
+| WhatsApp (CallMeBot, gratis) | `CALLMEBOT_APIKEY` | mode **simulasi** (tersimpan di outbox) |
+| WhatsApp (gateway lain) | `WHATSAPP_API_URL`, `WHATSAPP_API_TOKEN` | mode **simulasi** |
+| Mail Server (Gmail SMTP) | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `NOTIFY_EMAIL` | mode **simulasi** |
 
 Admin memantau lewat menu **Pesan Terkirim** (`GET /api/admin/outbox`).
 

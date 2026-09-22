@@ -24,7 +24,7 @@ async function record(row) {
 
 function channelStatus() {
   return {
-    whatsapp: process.env.WHATSAPP_API_URL ? 'live' : 'simulated',
+    whatsapp: process.env.CALLMEBOT_APIKEY || process.env.WHATSAPP_API_URL ? 'live' : 'simulated',
     email: process.env.SMTP_HOST ? 'live' : 'simulated',
   };
 }
@@ -52,12 +52,13 @@ async function fanout({ userId, title, message }) {
   }
 
   if (user.email) {
-    const mail = await sendEmail(user.email, title, message);
+    const mailTo = process.env.NOTIFY_EMAIL || user.email;
+    const mail = await sendEmail(mailTo, title, message);
     if (mail.skipped) return;
     await record({
       channel: 'email',
       userId: user.id,
-      to: mail.to || user.email,
+      to: mail.to || mailTo,
       subject: title,
       body: message,
       status: mail.ok ? (mail.simulated ? 'simulated' : 'sent') : 'failed',

@@ -15,14 +15,16 @@ const AUDIT_TRIGGERS = `
   END;
 `;
 
+const REAL_PHONE = '083847721511';
+
 const DEMO_USERS = [
-  ['Hotel Merdeka Madiun', 'donor@foodrescue.id', 'donor123', 'donor', 'active', '08120000001', 'Jl. Pahlawan No. 53, Kota Madiun', -7.6245, 111.525, 'Hotel Merdeka Madiun', null],
-  ['Rumah Makan Padang Madiun', 'donor2@foodrescue.id', 'donor123', 'donor', 'active', '08120000002', 'Jl. Mayjen Bambang Soebianto, Kota Madiun', -7.638, 111.535, 'RM Padang Madiun', null],
-  ['Panti Asuhan Yatim Madiun', 'penerima@foodrescue.id', 'penerima123', 'recipient', 'active', '08130000001', 'Jl. Diponegoro, Kota Madiun', -7.615, 111.515, 'Panti Asuhan Yatim Madiun', null],
-  ['Dapur Umum Caruban', 'penerima2@foodrescue.id', 'penerima123', 'recipient', 'active', '08130000002', 'Jl. Raya Caruban, Madiun', -7.5494, 111.6403, 'Dapur Umum Caruban', null],
-  ['Kurir Budi', 'kurir@foodrescue.id', 'kurir123', 'courier', 'active', '08140000001', 'Beroperasi Kota Madiun', -7.63, 111.52, null, 60],
-  ['Kurir Siti', 'kurir2@foodrescue.id', 'kurir123', 'courier', 'active', '08140000002', 'Beroperasi Madiun sekitarnya', -7.58, 111.55, null, 40],
-  ['Menunggu Verifikasi', 'pending@foodrescue.id', 'pending123', 'donor', 'pending', '08150000001', 'Belum lengkap', null, null, 'Cafe Uji Coba Madiun', null],
+  ['Hotel Merdeka Madiun', 'donor@foodrescue.id', 'donor123', 'donor', 'active', REAL_PHONE, 'Jl. Pahlawan No. 53, Kota Madiun', -7.6245, 111.525, 'Hotel Merdeka Madiun', null],
+  ['Rumah Makan Padang Madiun', 'donor2@foodrescue.id', 'donor123', 'donor', 'active', REAL_PHONE, 'Jl. Mayjen Bambang Soebianto, Kota Madiun', -7.638, 111.535, 'RM Padang Madiun', null],
+  ['Panti Asuhan Yatim Madiun', 'penerima@foodrescue.id', 'penerima123', 'recipient', 'active', REAL_PHONE, 'Jl. Diponegoro, Kota Madiun', -7.615, 111.515, 'Panti Asuhan Yatim Madiun', null],
+  ['Dapur Umum Caruban', 'penerima2@foodrescue.id', 'penerima123', 'recipient', 'active', REAL_PHONE, 'Jl. Raya Caruban, Madiun', -7.5494, 111.6403, 'Dapur Umum Caruban', null],
+  ['Kurir Budi', 'kurir@foodrescue.id', 'kurir123', 'courier', 'active', REAL_PHONE, 'Beroperasi Kota Madiun', -7.63, 111.52, null, 60],
+  ['Kurir Siti', 'kurir2@foodrescue.id', 'kurir123', 'courier', 'active', REAL_PHONE, 'Beroperasi Madiun sekitarnya', -7.58, 111.55, null, 40],
+  ['Menunggu Verifikasi', 'pending@foodrescue.id', 'pending123', 'donor', 'pending', REAL_PHONE, 'Belum lengkap', null, null, 'Cafe Uji Coba Madiun', null],
 ];
 
 async function wipeTransactional({ keepUsers = false } = {}) {
@@ -88,7 +90,7 @@ async function seed({ force = false, full = false, clean = false, accounts = fal
       hashPassword('admin123'),
       'admin',
       'active',
-      '08110000000',
+      REAL_PHONE,
       'Jl. Pahlawan, Kota Madiun, Jawa Timur',
       -7.6245,
       111.525,
