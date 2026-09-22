@@ -9,6 +9,8 @@ const MADURA_CENTER = [-7.05, 113.25];
 const MADURA_BOUNDS = [[-7.45, 112.5], [-6.7, 114.0]];
 
 const ICONS = {
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
   dashboard: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
   map: '<path d="M9 3 3 6v15l6-3 6 3 6-3V3l-6 3-6-3z"/><path d="M9 3v15"/><path d="M15 6v15"/>',
   users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
@@ -36,6 +38,33 @@ const ICONS = {
 function icon(name, size = 16) {
   const body = ICONS[name] || ICONS.dashboard;
   return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+}
+
+function getTheme() {
+  return localStorage.getItem('frai_theme') === 'dark' ? 'dark' : 'light';
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('frai_theme', theme);
+  const next = theme === 'dark' ? 'light' : 'dark';
+  const markup = icon(next === 'dark' ? 'moon' : 'sun', 17);
+  const label = next === 'dark' ? 'Mode gelap' : 'Mode terang';
+  const top = document.getElementById('themeToggle');
+  if (top) {
+    top.innerHTML = markup;
+    top.title = label;
+    top.setAttribute('aria-label', `Aktifkan ${label.toLowerCase()}`);
+  }
+  document.querySelectorAll('[data-theme-toggle]').forEach((btn) => {
+    btn.innerHTML = markup;
+    btn.title = label;
+    btn.setAttribute('aria-label', `Aktifkan ${label.toLowerCase()}`);
+  });
+}
+
+function toggleTheme() {
+  applyTheme(getTheme() === 'dark' ? 'light' : 'dark');
 }
 
 function pageHead(title, desc = '', actions = '') {
@@ -207,6 +236,7 @@ function render() {
     authRoot.hidden = false;
     authRoot.innerHTML = renderAuth();
     bindAuth();
+    applyTheme(getTheme());
     return;
   }
 
@@ -484,6 +514,7 @@ function renderAuth() {
       <div class="auth-foot">Fokus layanan · Bangkalan · Sampang · Pamekasan · Sumenep</div>
     </aside>
     <div class="auth-panel">
+      <button class="icon-btn auth-theme" type="button" data-theme-toggle title="Ganti tema" aria-label="Ganti tema terang/gelap"></button>
       <div class="auth-card">
         <div class="eyebrow">Platform redistribusi pangan</div>
         <h1>Masuk ke akun Anda</h1>
@@ -1070,9 +1101,17 @@ document.addEventListener('click', async (ev) => {
 document.getElementById('menuToggle')?.addEventListener('click', openSidebar);
 document.getElementById('sidebarOverlay')?.addEventListener('click', closeSidebar);
 
+/* Theme toggle */
+document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
+document.addEventListener('click', (ev) => {
+  if (ev.target.closest('[data-theme-toggle]')) toggleTheme();
+});
+applyTheme(getTheme());
+
 setInterval(async () => {
   if (!token || !me) return;
   if (currentTab === 'notif') renderView();
 }, 10000);
 
 render();
+applyTheme(getTheme());
