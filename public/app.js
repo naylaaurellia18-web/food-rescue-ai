@@ -633,7 +633,8 @@ function bindView() {
 
   document.querySelectorAll('[data-delete]').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      if (!confirm('Hapus item ini?')) return;
+      const msg = btn.dataset.confirm || 'Hapus item ini?';
+      if (!confirm(msg)) return;
       try {
         const res = await api(btn.dataset.delete, { method: 'DELETE' });
         toast(res.message || 'Dihapus');
@@ -1145,7 +1146,10 @@ async function renderAdminOutbox() {
   return `
   ${pageHead(
     'Pesan Terkirim',
-    'Riwayat notifikasi WhatsApp &amp; email'
+    'Riwayat notifikasi WhatsApp &amp; email',
+    rows.some((m) => m.status === 'sent' || m.status === 'simulated')
+      ? `<button class="btn btn-outline" data-delete="/api/admin/outbox/sent" data-confirm="Hapus semua pesan yang sudah terkirim dari riwayat?">Hapus Pesan Terkirim</button>`
+      : ''
   )}
   <div class="stat-grid">
     <div class="stat"><div class="label">WhatsApp</div><div class="value" style="font-size:1.1rem">${ch.whatsapp === 'live' ? 'Terhubung' : 'Simulasi'}</div><div class="hint">${ch.whatsapp === 'live' ? 'CallMeBot aktif' : 'isi CALLMEBOT_APIKEY'}</div></div>

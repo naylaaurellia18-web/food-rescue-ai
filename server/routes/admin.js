@@ -173,6 +173,20 @@ router.get('/outbox', async (_req, res, next) => {
   }
 });
 
+router.delete('/outbox/sent', async (req, res, next) => {
+  try {
+    const result = await db.run(
+      `DELETE FROM message_outbox WHERE status IN ('sent','simulated')`
+    );
+    await audit(req.user.id, 'CLEAN_OUTBOX', 'message_outbox', null, {
+      deleted: result?.changes ?? 0,
+    });
+    res.json({ message: 'Pesan terkirim dihapus' });
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get('/matches', async (_req, res, next) => {
   try {
     const rows = await db.all(
