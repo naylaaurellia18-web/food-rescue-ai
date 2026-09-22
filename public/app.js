@@ -115,6 +115,20 @@ function flowStepsHtml(status) {
   </div>`;
 }
 
+function flowStripHtml(steps) {
+  return `
+  <div class="card flow-card">
+    <div class="flow-strip">
+      ${steps
+        .map(
+          (s, i) =>
+            `${i ? '<span class="flow-strip-arrow">→</span>' : ''}<span class="flow-strip-step"><b>${i + 1}</b>${esc(s)}</span>`
+        )
+        .join('')}
+    </div>
+  </div>`;
+}
+
 const ICONS = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
   moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
@@ -163,7 +177,6 @@ function applyTheme(theme) {
       <span class="switch-thumb">${icon(isDark ? 'moon' : 'sun', 12)}</span>
     </span>
     <span class="switch-label">${isDark ? 'Gelap' : 'Terang'}</span>`;
-  const label = isDark ? 'Mode gelap aktif' : 'Mode terang aktif';
   const nextLabel = isDark ? 'Mode terang' : 'Mode gelap';
   document.querySelectorAll('#themeToggle, [data-theme-toggle]').forEach((btn) => {
     btn.innerHTML = trackHtml;
@@ -172,7 +185,6 @@ function applyTheme(theme) {
     btn.setAttribute('role', 'switch');
     btn.setAttribute('aria-checked', isDark ? 'true' : 'false');
     btn.dataset.themeState = theme;
-    void label;
   });
 }
 
@@ -355,25 +367,28 @@ function sopHtml(type, { compact = false } = {}) {
     </div>`;
   }
   return `
-  <div class="sop sop-${type}" data-sop="${type}">
-    <div class="sop-head">
-      ${icon('shield', 16)}
-      <div>
-        <strong>${s.title}</strong>
-        <div class="sop-warn">${esc(s.warn)}</div>
+  <details class="sop-details">
+    <summary>${icon('shield', 14)} Panduan SOP ${type === 'wet' ? 'Makanan Basah' : 'Makanan Kering'} — buka panduan</summary>
+    <div class="sop sop-${type}" data-sop="${type}">
+      <div class="sop-head">
+        ${icon('shield', 16)}
+        <div>
+          <strong>${s.title}</strong>
+          <div class="sop-warn">${esc(s.warn)}</div>
+        </div>
+        <span class="sop-badge">${type === 'wet' ? icon('refresh', 14) + ' Rantai dingin' : icon('package', 14) + ' Jaga kering'}</span>
       </div>
-      <span class="sop-badge">${type === 'wet' ? icon('refresh', 14) + ' Rantai dingin' : icon('package', 14) + ' Jaga kering'}</span>
+      <div class="sop-grid">
+        ${s.sections.map((sec) => `
+          <div class="sop-sec">
+            <div class="sop-sec-title">${esc(sec.title)}</div>
+            <ul class="sop-list">
+              ${sec.items.map((i) => `<li>${icon('check', 12)}<span>${esc(i)}</span></li>`).join('')}
+            </ul>
+          </div>`).join('')}
+      </div>
     </div>
-    <div class="sop-grid">
-      ${s.sections.map((sec) => `
-        <div class="sop-sec">
-          <div class="sop-sec-title">${esc(sec.title)}</div>
-          <ul class="sop-list">
-            ${sec.items.map((i) => `<li>${icon('check', 12)}<span>${esc(i)}</span></li>`).join('')}
-          </ul>
-        </div>`).join('')}
-    </div>
-  </div>`;
+  </details>`;
 }
 
 function bindSopToggle(root = document) {
@@ -663,7 +678,7 @@ async function renderGisMap() {
       <div class="stat accent"><div class="label">Rute aktif</div><div class="value">${activeMatches.length}</div></div>
     </div>
   </div>
-  <p class="muted">Marker peta hanya menampilkan lokasi di area <b>Madiun, Jawa Timur</b> (pilihan kecamatan/kota atau GPS). Semakin akurat lokasi, semakin tepat jarak &amp; rute AI Matching.</p>`;
+  <p class="muted" style="font-size:12.5px">Marker hanya menampilkan lokasi di area Madiun.</p>`;
 }
 
 function initGisMap() {
@@ -928,7 +943,7 @@ async function renderAdminDashboard() {
       <div class="flow-item"><span class="flow-num">1</span><div><strong>Donor catat surplus</strong><span>Foto, porsi, masa simpan, lokasi</span></div></div>
       <div class="flow-item"><span class="flow-num">2</span><div><strong>Penerima ajukan kebutuhan</strong><span>Jumlah porsi &amp; tingkat urgensi</span></div></div>
       <div class="flow-item"><span class="flow-num">3</span><div><strong>Admin verifikasi pengguna</strong><span>Aktifkan akun donor, penerima, kurir</span></div></div>
-      <div class="flow-item"><span class="flow-num">4</span><div><strong>Jalankan pencocokan AI</strong><span>Skor multi-kriteria &lt; 3 detik + rute peta</span></div></div>
+      <div class="flow-item"><span class="flow-num">4</span><div><strong>Jalankan pencocokan AI</strong><span>Skor multi-kriteria + rute peta</span></div></div>
     </div>
   </div>` : ''}
   <div class="stat-grid">
@@ -939,8 +954,7 @@ async function renderAdminDashboard() {
     <div class="stat"><div class="label">Rata-rata jarak</div><div class="value">${s.impact.avg_distance_km}</div><div class="hint">km</div></div>
     <div class="stat"><div class="label">Catatan audit</div><div class="value">${s.impact.audit_logs}</div><div class="hint">tidak dapat diubah</div></div>
     <div class="stat"><div class="label">Pesan outbox</div><div class="value">${s.impact.outbox_messages ?? 0}</div><div class="hint">WA ${s.channels?.whatsapp === 'live' ? 'aktif' : 'sim'} · Email ${s.channels?.email === 'live' ? 'aktif' : 'sim'}</div></div>
-    <div class="stat"><div class="label">Menunggu verifikasi</div><div class="value">${s.users.pending}</div></div>
-    <div class="stat"><div class="label">Durasi pencocokan</div><div class="value">${runs[0]?.duration_ms ?? '—'}</div><div class="hint">milidetik · target &lt; 3000</div></div>
+    <div class="stat"><div class="label">Durasi pencocokan</div><div class="value">${runs[0]?.duration_ms ?? '—'}</div><div class="hint">milidetik</div></div>
   </div>
   <div class="grid grid-2">
     <div class="card">
@@ -974,13 +988,13 @@ async function renderAdminDashboard() {
     <div class="card-head">
       <div>
         <h2>Riwayat kinerja pencocokan AI</h2>
-        <div class="sub">Durasi proses setiap kali dijalankan</div>
+        <div class="sub">Durasi tiap kali dijalankan</div>
       </div>
     </div>
     ${runs.length === 0 ? '<div class="empty">Belum ada proses — klik “Jalankan Pencocokan AI”.</div>' : `
     <div class="table-wrap">
     <table>
-      <thead><tr><th>Kandidat (stok/kebutuhan/kurir)</th><th>Dibuat</th><th>Durasi (milidetik)</th></tr></thead>
+      <thead><tr><th>Kandidat</th><th>Dibuat</th><th>Durasi (ms)</th></tr></thead>
       <tbody>
       ${runs.map(r => `<tr><td>${r.candidates_listings ?? '—'}/${r.candidates_needs ?? '—'}/${r.candidates_couriers ?? '—'}</td><td class="muted">${r.created ?? '—'}</td><td><b>${r.duration_ms ?? '—'}</b></td></tr>`).join('')}
       </tbody>
@@ -1027,7 +1041,7 @@ async function renderAdminMatches() {
   return `
   ${pageHead(
     'Pencocokan AI',
-    'Skor multi-kriteria: masa simpan, jarak, urgensi, kapasitas kurir — target &lt; 3 detik',
+    'Surplus dicocokkan ke kebutuhan &amp; kurir terdekat',
     `<button class="btn" data-post="/api/matches/run">${icon('sparkles', 15)} Jalankan Pencocokan</button>`
   )}
   <div class="card">
@@ -1097,29 +1111,29 @@ async function renderAdminOutbox() {
   const chChip = (state) =>
     state === 'live'
       ? '<span class="pill" style="background:var(--brand-soft);color:var(--brand);border:1px solid var(--brand-border)">Aktif</span>'
-      : '<span class="pill" style="background:var(--code-bg);color:var(--code-color);border:1px solid var(--border)">Simulasi</span>';
+      : '<span class="pill" style="background:var(--code-bg);color:var(--code-color);border:1px solid var(--line)">Simulasi</span>';
   return `
   ${pageHead(
     'Pesan Terkirim',
-    'Outbox WhatsApp Gateway &amp; Mail Server — setiap notifikasi juga dikirim ke kanal eksternal'
+    'Riwayat notifikasi WhatsApp &amp; email'
   )}
   <div class="stat-grid">
-    <div class="stat"><div class="label">WhatsApp Gateway</div><div class="value" style="font-size:1.1rem">${ch.whatsapp === 'live' ? 'Terhubung' : 'Simulasi'}</div><div class="hint">${ch.whatsapp === 'live' ? 'WHATSAPP_API_URL aktif' : 'isi env untuk kirim nyata'}</div></div>
-    <div class="stat"><div class="label">Mail Server</div><div class="value" style="font-size:1.1rem">${ch.email === 'live' ? 'Terhubung' : 'Simulasi'}</div><div class="hint">${ch.email === 'live' ? 'SMTP_HOST aktif' : 'isi env SMTP untuk kirim nyata'}</div></div>
+    <div class="stat"><div class="label">WhatsApp</div><div class="value" style="font-size:1.1rem">${ch.whatsapp === 'live' ? 'Terhubung' : 'Simulasi'}</div><div class="hint">${ch.whatsapp === 'live' ? 'CallMeBot aktif' : 'isi CALLMEBOT_APIKEY'}</div></div>
+    <div class="stat"><div class="label">Email</div><div class="value" style="font-size:1.1rem">${ch.email === 'live' ? 'Terhubung' : 'Simulasi'}</div><div class="hint">${ch.email === 'live' ? 'SMTP aktif' : 'isi SMTP_* untuk kirim nyata'}</div></div>
     <div class="stat accent"><div class="label">Total pesan</div><div class="value">${rows.length}</div></div>
   </div>
   <div class="card">
     <div class="card-head">
       <div>
         <h2>Riwayat outbox</h2>
-        <div class="sub">Status: sent = terkirim · simulated = mode demo · failed = gagal</div>
+        <div class="sub">sent = terkirim · simulated = demo · failed = gagal</div>
       </div>
       <div class="row">
         <span class="muted">${icon('phone', 14)} WhatsApp ${chChip(ch.whatsapp)}</span>
         <span class="muted">${icon('mail', 14)} Email ${chChip(ch.email)}</span>
       </div>
     </div>
-    ${rows.length === 0 ? '<div class="empty">Belum ada pesan. Notifikasi muncul otomatis saat match, pickup, OTP, atau verifikasi akun.</div>' : `
+    ${rows.length === 0 ? '<div class="empty">Belum ada pesan — notifikasi otomatis saat match, pickup, OTP, atau verifikasi.</div>' : `
     <div class="table-wrap">
     <table>
       <thead>
@@ -1144,15 +1158,7 @@ async function renderAdminOutbox() {
 async function renderDonorForm() {
   return `
   ${pageHead('Catat Surplus Makanan', 'Catat surplus dari hotel, restoran, atau ritel untuk dibagikan')}
-  <div class="card">
-    <div class="card-head"><h2>Alur donor</h2></div>
-    <div class="flow-explain">
-      <div class="flow-explain-item"><span class="flow-num">1</span><div><strong>Isi form di bawah</strong><span>Nama, porsi, masa simpan, lokasi, foto</span></div></div>
-      <div class="flow-explain-item"><span class="flow-num">2</span><div><strong>Admin jalankan AI Matching</strong><span>Surplus dicocokkan ke penerima &amp; kurir terdekat</span></div></div>
-      <div class="flow-explain-item"><span class="flow-num">3</span><div><strong>Kurir jemput &amp; antar</strong><span>Pantau status di menu “Pencocokan Saya”</span></div></div>
-      <div class="flow-explain-item"><span class="flow-num">4</span><div><strong>Penerima konfirmasi OTP</strong><span>Transaksi selesai &amp; tercatat di audit</span></div></div>
-    </div>
-  </div>
+  ${flowStripHtml(['Isi form surplus', 'AI Matching oleh admin', 'Kurir jemput & antar', 'Penerima konfirmasi OTP'])}
   <div class="card">
     <form data-action="1" data-endpoint="/api/food" data-multipart="1">
       <label>Nama surplus</label>
@@ -1212,7 +1218,7 @@ async function renderDonorListings() {
     <div class="card-head">
       <div>
         <h2>Panduan SOP penanganan</h2>
-        <div class="sub">Wajib dipatuhi donor &amp; kurir saat pengemasan dan pengantaran</div>
+        <div class="sub">Wajib dipatuhi saat pengemasan &amp; pengantaran</div>
       </div>
     </div>
     <div class="grid grid-2">
@@ -1252,15 +1258,7 @@ async function renderRecipientForm() {
   const needsList = await renderRecipientNeedsList();
   return `
   ${pageHead('Kebutuhan Pangan', 'Ajukan kebutuhan porsi makanan untuk komunitas atau lembaga Anda')}
-  <div class="card">
-    <div class="card-head"><h2>Alur penerima manfaat</h2></div>
-    <div class="flow-explain">
-      <div class="flow-explain-item"><span class="flow-num">1</span><div><strong>Ajukan kebutuhan</strong><span>Jumlah porsi + tingkat urgensi + lokasi</span></div></div>
-      <div class="flow-explain-item"><span class="flow-num">2</span><div><strong>Admin jalankan AI Matching</strong><span>Donor &amp; kurir ditugaskan otomatis</span></div></div>
-      <div class="flow-explain-item"><span class="flow-num">3</span><div><strong>Kurir mengantar</strong><span>Notifikasi masuk saat dijemput &amp; sampai</span></div></div>
-      <div class="flow-explain-item"><span class="flow-num">4</span><div><strong>Masukkan OTP</strong><span>Buka menu “Konfirmasi OTP” → klik konfirmasi terima</span></div></div>
-    </div>
-  </div>
+  ${flowStripHtml(['Ajukan kebutuhan', 'AI Matching donor & kurir', 'Kurir mengantar', 'Masukkan OTP'])}
   <div class="card">
     <form data-action="1" data-endpoint="/api/needs">
       <label>Judul kebutuhan</label>
@@ -1332,17 +1330,9 @@ async function renderRecipientMatches() {
   return `
   ${pageHead(
     'Konfirmasi OTP',
-    'Masukkan kode 6 digit dari kurir/notifikasi untuk konfirmasi serah terima'
+    'Masukkan kode 6 digit untuk konfirmasi serah terima'
   )}
-  <div class="card">
-    <div class="card-head"><h2>Alur serah terima</h2></div>
-    <div class="flow-explain">
-      <div class="flow-explain-item"><span class="flow-num">1</span><div><strong>Kurir jemput surplus</strong><span>Foto kondisi makanan diunggah kurir</span></div></div>
-      <div class="flow-explain-item"><span class="flow-num">2</span><div><strong>Kurir antar ke Anda</strong><span>Status berubah jadi “sampai di lokasi”</span></div></div>
-      <div class="flow-explain-item"><span class="flow-num">3</span><div><strong>OTP muncul di sini</strong><span>Kode 6 digit tampil di kartu konfirmasi di bawah (juga dikirim ke notifikasi &amp; WhatsApp/email bila aktif)</span></div></div>
-      <div class="flow-explain-item"><span class="flow-num">4</span><div><strong>Konfirmasi terima</strong><span>Klik konfirmasi → transaksi selesai &amp; tercatat di audit</span></div></div>
-    </div>
-  </div>
+  ${flowStripHtml(['Kurir jemput surplus', 'Kurir antar ke Anda', 'OTP muncul di sini', 'Konfirmasi terima'])}
   <div class="card">
     <div class="card-head"><h2>Menunggu konfirmasi</h2></div>
     ${withOtp.length === 0 ? '<div class="empty">Belum ada kiriman menunggu konfirmasi OTP.</div>' : withOtp.map((m) => {
@@ -1398,15 +1388,7 @@ async function renderCourier() {
   const active = rows.filter((m) => ['proposed', 'accepted', 'picked_up', 'delivered'].includes(m.status));
   return `
   ${pageHead('Tugas Kurir', 'Ambil foto kondisi makanan, antar, dan tandai status pengiriman')}
-  <div class="card">
-    <div class="card-head"><h2>Alur kurir</h2></div>
-    <div class="flow-explain">
-      <div class="flow-explain-item"><span class="flow-num">1</span><div><strong>Terima tugas</strong><span>Muncul setelah admin jalankan AI Matching — lihat rute di Peta GIS</span></div></div>
-      <div class="flow-explain-item"><span class="flow-num">2</span><div><strong>Foto &amp; jemput</strong><span>Wajib unggah foto kondisi makanan → OTP dikirim ke penerima</span></div></div>
-      <div class="flow-explain-item"><span class="flow-num">3</span><div><strong>Antar &amp; tandai sampai</strong><span>Klik “Tandai sampai di lokasi” setelah tiba</span></div></div>
-      <div class="flow-explain-item"><span class="flow-num">4</span><div><strong>Penerima masukkan OTP</strong><span>Status jadi selesai — Anda dapat tugas berikutnya</span></div></div>
-    </div>
-  </div>
+  ${flowStripHtml(['Terima tugas', 'Foto & jemput', 'Antar & tandai sampai', 'Penerima OTP → selesai'])}
   <div class="card">
     <div class="card-head"><h2>Tugas aktif</h2></div>
     ${active.length === 0 ? '<div class="empty"><div class="empty-title">Belum ada tugas</div>Minta admin menjalankan pencocokan AI.</div>' : active.map((m) => {
