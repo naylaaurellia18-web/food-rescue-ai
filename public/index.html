@@ -4,9 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Food Rescue AI — Madura</title>
+  <meta name="description" content="Platform redistribusi surplus makanan berbasis AI Matching & GIS untuk Madura, Jawa Timur." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
@@ -14,26 +15,48 @@
   <div id="app">
     <div id="authRoot"></div>
 
-    <div class="layout" id="appLayout" hidden>
-      <button class="menu-toggle" id="menuToggle" type="button" aria-label="Menu">☰</button>
-      <div class="overlay" id="sidebarOverlay"></div>
+    <div class="app-shell" id="appLayout" hidden>
+      <div class="backdrop" id="sidebarOverlay"></div>
 
       <aside class="sidebar" id="sidebar">
-        <div class="sidebar-brand">
-          <span class="logo">🥗</span>
-          <span>Food Rescue AI</span>
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+          </span>
+          <div class="brand-text">
+            <strong>Food Rescue AI</strong>
+            <span>Madura · Jawa Timur</span>
+          </div>
         </div>
-        <div class="sidebar-section">Menu</div>
-        <nav class="sidebar-nav" id="nav"></nav>
-        <div class="sidebar-user">
-          <div class="name" id="userName"></div>
-          <span class="role" id="userRole"></span>
-          <div class="status-line" id="userStatus"></div>
-          <button class="btn-logout" type="button" onclick="logout()">Keluar</button>
+
+        <nav class="nav" id="nav" aria-label="Menu utama"></nav>
+
+        <div class="side-foot">
+          <div class="avatar" id="userAvatar"></div>
+          <div class="side-user">
+            <div class="side-name" id="userName"></div>
+            <div class="side-meta"><span class="pill" id="userRole"></span></div>
+          </div>
+          <button class="icon-btn logout" type="button" onclick="logout()" title="Keluar" aria-label="Keluar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+          </button>
         </div>
       </aside>
 
-      <main class="main" id="view"></main>
+      <div class="main-col">
+        <header class="topbar">
+          <button class="icon-btn menu-btn" id="menuToggle" type="button" aria-label="Buka menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+          </button>
+          <div class="topbar-title" id="topbarTitle">Dashboard</div>
+          <div class="topbar-right">
+            <span class="env-chip">Production</span>
+            <span class="topbar-user" id="topbarUser"></span>
+          </div>
+        </header>
+
+        <main class="content" id="view"></main>
+      </div>
     </div>
   </div>
 
