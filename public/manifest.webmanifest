@@ -1,0 +1,52 @@
+{
+  "name": "Food Rescue AI — Redistribusi Pangan",
+  "short_name": "Food Rescue",
+  "description": "Platform redistribusi surplus makanan berbasis AI Matching & GIS.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#16a34a",
+  "lang": "id",
+  "dir": "ltr",
+  "categories": ["food", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Catat Surplus",
+      "short_name": "Surplus",
+      "url": "/?tab=donor"
+    },
+    {
+      "name": "Konfirmasi OTP",
+      "short_name": "OTP",
+      "url": "/?tab=recipient-matches"
+    },
+    {
+      "name": "Tugas Kurir",
+      "short_name": "Kurir",
+      "url": "/?tab=courier"
+    }
+  ]
+}

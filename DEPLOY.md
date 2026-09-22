@@ -46,6 +46,16 @@ turso db tokens create food-rescue-ai
    | `TURSO_AUTH_TOKEN` | Auth token Turso |
    | `JWT_SECRET` | string acak panjang (bebas, mis. `rahasia-kuliah-2026-xxxx`) |
 
+   **Opsional — notifikasi nyata (tanpa env tetap jalan mode simulasi):**
+
+   | Key | Fungsi |
+   |-----|--------|
+   | `WHATSAPP_API_URL` | Endpoint WhatsApp gateway (POST JSON) |
+   | `WHATSAPP_API_TOKEN` | Token API gateway |
+   | `SMTP_HOST` / `SMTP_PORT` | Mail server (mis. `smtp.gmail.com` / `587`) |
+   | `SMTP_USER` / `SMTP_PASS` | Akun SMTP |
+   | `MAIL_FROM` | Alamat pengirim |
+
 5. **Build & Deploy** → tunggu 1–2 menit
 6. Dapat URL: `https://food-rescue-ai-xxx.vercel.app` 🎉
 

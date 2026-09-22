@@ -139,6 +139,12 @@ async function login(email, password) {
   const notif = await api('/api/notifications', { token: recipientToken });
   console.log(`✓ FR-06 notifikasi penerima: ${notif.length} entri`);
 
+  await new Promise((r) => setTimeout(r, 400));
+  const outbox = await api('/api/admin/outbox', { token: admin });
+  console.log(
+    `✓ Outbox: ${outbox.messages.length} pesan · WA=${outbox.channels.whatsapp} · Email=${outbox.channels.email}`
+  );
+
   const imm = await fetch(`${base}/api/admin/logs`).then((r) => r.status);
   console.log('✓ RBAC: /api/admin/logs tanpa token ->', imm);
 

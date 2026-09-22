@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { audit, notify } = require('../lib/audit');
+const { channelStatus } = require('../lib/channels');
 const { authenticate, requireRole, requireActive } = require('../middleware');
 
 const router = express.Router();
@@ -56,7 +57,9 @@ router.get('/stats', async (req, res, next) => {
         avg_score: Number((avgScore * 100).toFixed(1)),
         avg_distance_km: Number(avgDistance.toFixed(2)),
         audit_logs: await count('SELECT COUNT(*) AS c FROM audit_logs'),
+        outbox_messages: await count('SELECT COUNT(*) AS c FROM message_outbox'),
       },
+      channels: channelStatus(),
       performance: {
         last_matching_runs: matchingPerf,
         target_matching_ms: 3000,
@@ -141,6 +144,19 @@ router.get('/logs', async (_req, res, next) => {
        ORDER BY a.id DESC LIMIT 200`
     );
     res.json(rows.map((r) => ({ ...r, detail_obj: r.detail ? JSON.parse(r.detail) : null })));
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get('/outbox', async (_req, res, next) => {
+  try {
+    const rows = await db.all(
+      `SELECT o.*, u.name AS user_name, u.role AS user_role
+       FROM message_outbox o LEFT JOIN users u ON u.id = o.user_id
+       ORDER BY o.id DESC LIMIT 200`
+    );
+    res.json({ channels: channelStatus(), messages: rows });
   } catch (e) {
     next(e);
   }

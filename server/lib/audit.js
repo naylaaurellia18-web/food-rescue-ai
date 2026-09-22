@@ -20,6 +20,11 @@ async function notify(userId, title, message, matchId = null) {
      VALUES (?, ?, ?, ?)`,
     [userId, matchId, title, message]
   );
+  setImmediate(() => {
+    require('./channels')
+      .fanout({ userId, title, message })
+      .catch((e) => console.error('fanout kanal:', e.message));
+  });
 }
 
 module.exports = { audit, notify };

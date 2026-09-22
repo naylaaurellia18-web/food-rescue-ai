@@ -33,6 +33,9 @@ const ICONS = {
   route: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
   refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
   arrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  message: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
 };
 
 function icon(name, size = 16) {
@@ -298,6 +301,7 @@ const NAV = {
     ['gis', 'map', 'Peta GIS'],
     ['users', 'users', 'Pengguna'],
     ['matches', 'cpu', 'Pencocokan AI'],
+    ['outbox', 'message', 'Pesan Terkirim'],
     ['logs', 'file', 'Catatan Audit'],
     ['notif', 'bell', 'Notifikasi'],
   ],
@@ -326,6 +330,7 @@ const TAB_TITLES = {
   gis: 'Peta GIS',
   users: 'Pengguna',
   matches: 'Pencocokan AI',
+  outbox: 'Pesan Terkirim',
   logs: 'Catatan Audit',
   notif: 'Notifikasi',
   donor: 'Catat Surplus',
@@ -425,6 +430,7 @@ async function renderView() {
       gis: renderGisMap,
       users: renderAdminUsers,
       matches: renderAdminMatches,
+      outbox: renderAdminOutbox,
       logs: renderAdminLogs,
       notif: renderNotif,
       donor: renderDonorForm,
@@ -822,6 +828,7 @@ async function renderAdminDashboard() {
     <div class="stat"><div class="label">Rata-rata skor</div><div class="value">${s.impact.avg_score}%</div></div>
     <div class="stat"><div class="label">Rata-rata jarak</div><div class="value">${s.impact.avg_distance_km}</div><div class="hint">km</div></div>
     <div class="stat"><div class="label">Catatan audit</div><div class="value">${s.impact.audit_logs}</div><div class="hint">tidak dapat diubah</div></div>
+    <div class="stat"><div class="label">Pesan outbox</div><div class="value">${s.impact.outbox_messages ?? 0}</div><div class="hint">WA ${s.channels?.whatsapp === 'live' ? 'aktif' : 'sim'} · Email ${s.channels?.email === 'live' ? 'aktif' : 'sim'}</div></div>
     <div class="stat"><div class="label">Menunggu verifikasi</div><div class="value">${s.users.pending}</div></div>
     <div class="stat"><div class="label">Durasi pencocokan</div><div class="value">${runs[0]?.duration_ms ?? '—'}</div><div class="hint">milidetik · target &lt; 3000</div></div>
   </div>
@@ -966,6 +973,57 @@ async function renderAdminLogs() {
         <td><code>${esc(l.action)}</code></td>
         <td>${esc(l.entity)}${l.entity_id ? '#' + esc(l.entity_id) : ''}</td>
         <td class="muted" style="max-width:260px;word-break:break-all">${l.detail ? esc(l.detail) : '—'}</td>
+      </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>`}
+  </div>`;
+}
+
+async function renderAdminOutbox() {
+  const data = await api('/api/admin/outbox');
+  const rows = data.messages || [];
+  const ch = data.channels || {};
+  const chChip = (state) =>
+    state === 'live'
+      ? '<span class="pill" style="background:var(--brand-soft);color:var(--brand);border:1px solid var(--brand-border)">Aktif</span>'
+      : '<span class="pill" style="background:var(--code-bg);color:var(--code-color);border:1px solid var(--border)">Simulasi</span>';
+  return `
+  ${pageHead(
+    'Pesan Terkirim',
+    'Outbox WhatsApp Gateway &amp; Mail Server — setiap notifikasi juga dikirim ke kanal eksternal'
+  )}
+  <div class="stat-grid">
+    <div class="stat"><div class="label">WhatsApp Gateway</div><div class="value" style="font-size:1.1rem">${ch.whatsapp === 'live' ? 'Terhubung' : 'Simulasi'}</div><div class="hint">${ch.whatsapp === 'live' ? 'WHATSAPP_API_URL aktif' : 'isi env untuk kirim nyata'}</div></div>
+    <div class="stat"><div class="label">Mail Server</div><div class="value" style="font-size:1.1rem">${ch.email === 'live' ? 'Terhubung' : 'Simulasi'}</div><div class="hint">${ch.email === 'live' ? 'SMTP_HOST aktif' : 'isi env SMTP untuk kirim nyata'}</div></div>
+    <div class="stat accent"><div class="label">Total pesan</div><div class="value">${rows.length}</div></div>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Riwayat outbox</h2>
+        <div class="sub">Status: sent = terkirim · simulated = mode demo · failed = gagal</div>
+      </div>
+      <div class="row">
+        <span class="muted">${icon('phone', 14)} WhatsApp ${chChip(ch.whatsapp)}</span>
+        <span class="muted">${icon('mail', 14)} Email ${chChip(ch.email)}</span>
+      </div>
+    </div>
+    ${rows.length === 0 ? '<div class="empty">Belum ada pesan. Notifikasi muncul otomatis saat match, pickup, OTP, atau verifikasi akun.</div>' : `
+    <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Kanal</th><th>Penerima</th><th>Subjek</th><th>Status</th><th>Waktu</th></tr>
+      </thead>
+      <tbody>
+      ${rows.map((m) => `
+      <tr>
+        <td class="muted">${m.id}</td>
+        <td>${m.channel === 'whatsapp' ? icon('phone', 13) : icon('mail', 13)} ${m.channel === 'whatsapp' ? 'WhatsApp' : 'Email'}</td>
+        <td>${esc(m.to_address || '—')}<br><span class="muted">${esc(m.user_name || '')}</span></td>
+        <td><b>${esc(m.subject || '—')}</b><br><span class="muted" style="max-width:280px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.body || '')}</span></td>
+        <td>${statusTag(m.status)}${m.error ? `<br><span class="muted">${esc(m.error)}</span>` : ''}</td>
+        <td class="muted">${fmtDate(m.created_at)}</td>
       </tr>`).join('')}
       </tbody>
     </table>
@@ -1318,6 +1376,13 @@ setInterval(async () => {
   if (!token || !me) return;
   if (currentTab === 'notif') renderView();
 }, 10000);
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+const urlTab = new URLSearchParams(location.search).get('tab');
+if (urlTab && token && me) currentTab = urlTab;
 
 render();
 applyTheme(getTheme());

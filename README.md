@@ -9,11 +9,12 @@ Dibangun untuk tugas kuliah sesuai dokumen SKPL (10 FR + 8 NFR).
 | Layer | Teknologi |
 |-------|-----------|
 | Backend | Node.js 24 + Express |
-| Database | SQLite (`node:sqlite` built-in, tanpa install) |
+| Database | SQLite (`node:sqlite` built-in) lokal / Turso di Vercel |
 | Auth | JWT + bcrypt (RBAC 4 role) |
-| Frontend | SPA HTML/CSS/JS (tanpa build tool) |
+| Frontend | SPA HTML/CSS/JS + **PWA** (installable di mobile) |
 | GIS | Haversine distance + estimasi durasi rute |
 | Upload | Multer (foto surplus & foto serah terima) |
+| Notifikasi | In-app + **WhatsApp Gateway** + **Mail Server** (outbox) |
 
 ## Cara Menjalankan
 
@@ -72,6 +73,7 @@ audit_logs (immutable — trigger BLOCK UPDATE & DELETE)
 | `matches` | Hasil FR-04: skor total + 4 sub-skor, jarak, rute JSON, status alur |
 | `otp_codes` | FR-08 OTP 6 digit, expiry 30 menit, sekali pakai |
 | `notifications` | FR-06 notifikasi per user |
+| `message_outbox` | Outbox WhatsApp & email (sent/simulated/failed) |
 | `audit_logs` | Log immutable (trigger SQLite cegah UPDATE/DELETE) |
 
 ## Algoritma AI Matching (FR-04)
@@ -102,19 +104,40 @@ score = 0.35·expiry + 0.30·distance + 0.20·urgency + 0.15·capacity
 | FR-03 | `POST /api/needs`, `PATCH /api/needs/:id` |
 | FR-04 | `POST /api/matches/run` → `server/lib/matching.js` |
 | FR-05 | `server/lib/gis.js` (haversine + waypoint legs) |
-| FR-06 | `GET /api/notifications`, auto-notify saat match/pickup/OTP |
+| FR-06 | `GET /api/notifications` + fanout WA/email `server/lib/channels.js` |
 | FR-07 | `POST /api/deliveries/:id/pickup` (foto wajib) |
 | FR-08 | `POST /api/deliveries/:id/verify-otp` |
 | FR-09 | `GET /api/admin/stats` + halaman Dashboard |
 | FR-10 | `GET/PATCH/DELETE /api/admin/users` |
+| Outbox | `GET /api/admin/outbox` — riwayat pesan WhatsApp & email |
 
 ## NFR yang Dipenuhi
 
 - **Keamanan** — bcrypt (10 rounds), JWT 12h, RBAC, akun aktif setelah verifikasi admin
 - **Performa** — matching < 3 detik (di-log di audit)
 - **Auditabilitas** — `audit_logs` dengan trigger immutable SQLite
-- **Portabilitas** — web SPA responsif (Admin desktop; Donor/Penerima/Kurir bisa via mobile browser)
+- **Portabilitas** — web SPA responsif + **PWA** (Donor/Penerima/Kurir bisa install dari browser mobile)
 - **Skalabilitas** — stateless JWT; SQLite WAL untuk demo; siap migrasi PostgreSQL
+
+## Notifikasi Eksternal (WhatsApp & Email)
+
+Setiap `notify()` in-app otomatis di-fanout ke:
+
+| Kanal | Env | Tanpa env |
+|-------|-----|-----------|
+| WhatsApp Gateway | `WHATSAPP_API_URL`, `WHATSAPP_API_TOKEN` | mode **simulasi** (tersimpan di outbox) |
+| Mail Server (SMTP) | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | mode **simulasi** |
+
+Admin memantau lewat menu **Pesan Terkirim** (`GET /api/admin/outbox`).
+
+Format body POST WhatsApp (kompatibel gateways umum): `{ phone, to, target, message, text, body }` + header `Authorization: Bearer <token>`.
+
+## PWA (Mobile App)
+
+- `public/manifest.webmanifest` + `public/sw.js` + ikon di `public/icons/`
+- Tampilan standalone, bisa di-install dari Chrome/Safari mobile
+- Shortcut: Catat Surplus · Konfirmasi OTP · Tugas Kurir
+- API selalu network-first; aset di-cache untuk offline shell
 
 ## Struktur Proyek
 
@@ -130,12 +153,14 @@ food-rescue-ai/
 │   │   ├── auth.js       # bcrypt + JWT + OTP
 │   │   ├── gis.js        # haversine + rute
 │   │   ├── matching.js   # algoritma multi-kriteria
+│   │   ├── messenger.js  # kirim WhatsApp & email
+│   │   ├── channels.js   # fanout notify → outbox
 │   │   └── audit.js      # audit + notifikasi
 │   └── routes/
 │       ├── auth.js  food.js  needs.js
 │       ├── matching.js  deliveries.js
 │       ├── notifications.js  admin.js
-├── public/               # SPA frontend
+├── public/               # SPA + PWA (manifest, sw, icons)
 ├── uploads/              # foto
 ├── data/                 # food_rescue.db
 └── e2e-test.js           # uji alur lengkap

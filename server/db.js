@@ -99,6 +99,18 @@ const SCHEMA_STATEMENTS = [
    BEGIN
      SELECT RAISE(ABORT, 'audit_logs is immutable');
    END`,
+  `CREATE TABLE IF NOT EXISTS message_outbox (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel TEXT NOT NULL CHECK (channel IN ('whatsapp','email')),
+    user_id INTEGER,
+    to_address TEXT,
+    subject TEXT,
+    body TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued','sent','simulated','failed')),
+    error TEXT,
+    provider_ref TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
 ];
 
 const cloudUrl = process.env.TURSO_DATABASE_URL || process.env.LIBSQL_DATABASE_URL || null;

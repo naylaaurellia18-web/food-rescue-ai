@@ -1,7 +1,7 @@
 {
   "name": "food-rescue-ai",
   "version": "1.0.0",
-  "description": "Platform redistribusi surplus makanan berbasis AI Matching & GIS",
+  "description": "Platform redistribusi surplus makanan berbasis AI Matching & GIS — PWA + WhatsApp/Email gateway",
   "main": "server/index.js",
   "type": "commonjs",
   "engines": {
@@ -18,6 +18,7 @@
     "bcryptjs": "^2.4.3",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^2.0.0"
+    "multer": "^2.0.0",
+    "nodemailer": "^10.0.10"
   }
 }

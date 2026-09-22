@@ -21,6 +21,7 @@ async function seed({ force = false, full = false } = {}) {
       DROP TRIGGER IF EXISTS audit_logs_no_delete;
       DELETE FROM otp_codes;
       DELETE FROM notifications;
+      DELETE FROM message_outbox;
       DELETE FROM audit_logs;
       DELETE FROM matches;
       DELETE FROM food_listings;
@@ -39,7 +40,7 @@ async function seed({ force = false, full = false } = {}) {
     `);
     try {
       await db.exec(
-        `DELETE FROM sqlite_sequence WHERE name IN ('users','food_listings','food_needs','matches','otp_codes','notifications','audit_logs')`
+        `DELETE FROM sqlite_sequence WHERE name IN ('users','food_listings','food_needs','matches','otp_codes','notifications','message_outbox','audit_logs')`
       );
     } catch {
       /* cloud tanpa sqlite_sequence */

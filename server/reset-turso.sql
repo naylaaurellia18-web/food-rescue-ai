@@ -10,6 +10,7 @@ DROP TRIGGER IF EXISTS audit_logs_no_delete;
 
 DELETE FROM otp_codes;
 DELETE FROM notifications;
+DELETE FROM message_outbox;
 DELETE FROM audit_logs;
 DELETE FROM matches;
 DELETE FROM food_listings;
@@ -34,4 +35,5 @@ SELECT
   (SELECT COUNT(*) FROM food_listings) AS listings,
   (SELECT COUNT(*) FROM food_needs) AS needs,
   (SELECT COUNT(*) FROM matches) AS matches,
+  (SELECT COUNT(*) FROM message_outbox) AS outbox,
   (SELECT COUNT(*) FROM audit_logs) AS logs;
