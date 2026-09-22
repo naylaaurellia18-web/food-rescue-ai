@@ -17,14 +17,15 @@ const AUDIT_TRIGGERS = `
 
 const REAL_PHONE = '083847721511';
 
+// Lokasi = daftar yang sama dengan dropdown & marker peta (hanya Madiun)
 const DEMO_USERS = [
-  ['Hotel Merdeka Madiun', 'donor@foodrescue.id', 'donor123', 'donor', 'active', REAL_PHONE, 'Jl. Pahlawan No. 53, Kota Madiun', -7.6245, 111.525, 'Hotel Merdeka Madiun', null],
-  ['Rumah Makan Padang Madiun', 'donor2@foodrescue.id', 'donor123', 'donor', 'active', REAL_PHONE, 'Jl. Mayjen Bambang Soebianto, Kota Madiun', -7.638, 111.535, 'RM Padang Madiun', null],
-  ['Panti Asuhan Yatim Madiun', 'penerima@foodrescue.id', 'penerima123', 'recipient', 'active', REAL_PHONE, 'Jl. Diponegoro, Kota Madiun', -7.615, 111.515, 'Panti Asuhan Yatim Madiun', null],
-  ['Dapur Umum Caruban', 'penerima2@foodrescue.id', 'penerima123', 'recipient', 'active', REAL_PHONE, 'Jl. Raya Caruban, Madiun', -7.5494, 111.6403, 'Dapur Umum Caruban', null],
-  ['Kurir Budi', 'kurir@foodrescue.id', 'kurir123', 'courier', 'active', REAL_PHONE, 'Beroperasi Kota Madiun', -7.63, 111.52, null, 60],
-  ['Kurir Siti', 'kurir2@foodrescue.id', 'kurir123', 'courier', 'active', REAL_PHONE, 'Beroperasi Madiun sekitarnya', -7.58, 111.55, null, 40],
-  ['Menunggu Verifikasi', 'pending@foodrescue.id', 'pending123', 'donor', 'pending', REAL_PHONE, 'Belum lengkap', null, null, 'Cafe Uji Coba Madiun', null],
+  ['Hotel Merdeka Madiun', 'donor@foodrescue.id', 'donor123', 'donor', 'active', REAL_PHONE, 'Kota Madiun', -7.6245, 111.525, 'Hotel Merdeka Madiun', null],
+  ['Rumah Makan Padang Madiun', 'donor2@foodrescue.id', 'donor123', 'donor', 'active', REAL_PHONE, 'Kartoharjo', -7.6014, 111.4844, 'RM Padang Madiun', null],
+  ['Panti Asuhan Yatim Madiun', 'penerima@foodrescue.id', 'penerima123', 'recipient', 'active', REAL_PHONE, 'Taman', -7.6503, 111.5172, 'Panti Asuhan Yatim Madiun', null],
+  ['Dapur Umum Caruban', 'penerima2@foodrescue.id', 'penerima123', 'recipient', 'active', REAL_PHONE, 'Caruban', -7.5494, 111.6403, 'Dapur Umum Caruban', null],
+  ['Kurir Budi', 'kurir@foodrescue.id', 'kurir123', 'courier', 'active', REAL_PHONE, 'Balerejo', -7.5483, 111.5597, null, 60],
+  ['Kurir Siti', 'kurir2@foodrescue.id', 'kurir123', 'courier', 'active', REAL_PHONE, 'Mejayan', -7.5519, 111.4536, null, 40],
+  ['Menunggu Verifikasi', 'pending@foodrescue.id', 'pending123', 'donor', 'pending', REAL_PHONE, 'Kota Madiun', null, null, 'Cafe Uji Coba Madiun', null],
 ];
 
 async function wipeTransactional({ keepUsers = false } = {}) {
@@ -91,7 +92,7 @@ async function seed({ force = false, full = false, clean = false, accounts = fal
       'admin',
       'active',
       REAL_PHONE,
-      'Jl. Pahlawan, Kota Madiun, Jawa Timur',
+      'Kota Madiun',
       -7.6245,
       111.525,
       'Food Rescue AI',
@@ -115,8 +116,8 @@ async function seed({ force = false, full = false, clean = false, accounts = fal
     const listings = [
       [2, 'Buffet Sarapan Sisa', 'Nasi, lauk pauk — masih layak konsumsi', 'wet', 40, inHours(3), -7.6245, 111.525, 'available'],
       [2, 'Roti & Pastry', 'Roti sobek, croissant', 'dry', 25, inHours(8), -7.6245, 111.525, 'available'],
-      [3, 'Nasi Box Acara', 'Sisa katering — 30 box', 'wet', 30, inHours(5), -7.638, 111.535, 'available'],
-      [3, 'Sayur & Buah Segar', 'Sayur mayur dan buah potong', 'wet', 20, inHours(12), -7.638, 111.535, 'available'],
+      [3, 'Nasi Box Acara', 'Sisa katering — 30 box', 'wet', 30, inHours(5), -7.6014, 111.4844, 'available'],
+      [3, 'Sayur & Buah Segar', 'Sayur mayur dan buah potong', 'wet', 20, inHours(12), -7.6014, 111.4844, 'available'],
       [2, 'Biskuit & Keripik Cadangan', 'Kemasan foil utuh, simpan kering', 'dry', 50, inHours(48), -7.6245, 111.525, 'available'],
     ];
     for (const l of listings) {
@@ -128,7 +129,7 @@ async function seed({ force = false, full = false, clean = false, accounts = fal
     }
 
     const needs = [
-      [4, 'Santapan Malam Anak Yatim', 35, 'critical', 'Kota Madiun — 35 anak'],
+      [4, 'Santapan Malam Anak Yatim', 35, 'critical', 'Taman — 35 anak'],
       [4, 'Camilan Sore', 15, 'low', 'Tambahan camilan sore'],
       [5, 'Makan Siang Warga', 45, 'high', 'Caruban — 45 porsi/hari'],
       [5, 'Distribusi Mingguan', 20, 'medium', 'Cadangan stok mingguan'],

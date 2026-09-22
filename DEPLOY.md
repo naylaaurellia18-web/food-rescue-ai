@@ -170,7 +170,8 @@ Menu **Pesan Terkirim** menampilkan status tiap pesan (`sent` = nyata, `simulate
 ## 🗺️ Peta GIS
 
 Menu sidebar **Peta GIS** memakai **Leaflet + OpenStreetMap** (gratis, tanpa API key):
-- Fokus peta: **Madiun & sekitarnya** (Kota Madiun · Caruban · Mejayan · Balerejo · Ngawi · Magetan · Ponorogo)
+- Fokus peta: **Madiun saja** (Kota Madiun + kecamatan Kab. Madiun: Caruban · Mejayan · Balerejo · Dagangan · Dolopo · Geger · Saradan · Kartoharjo · Taman · Wungu · Sawahan)
+- Lokasi dropdown = alamat akun demo = titik marker di peta (sama semua)
 - Marker: Donor (biru), Penerima (merah), Kurir (oranye), Surplus (hijau)
 - Polyline putus-putus: rute pengantaran hasil AI Matching
 
@@ -182,9 +183,8 @@ Saat registrasi/input, pilih lokasi dari dropdown (otomatis isi lat/lng):
 | Caruban | -7.55 | 111.64 |
 | Mejayan | -7.55 | 111.45 |
 | Balerejo | -7.55 | 111.56 |
-| Ngawi | -7.40 | 111.44 |
-| Magetan | -7.66 | 111.33 |
-| Ponorogo | -7.87 | 111.47 |
+| Kartoharjo | -7.60 | 111.48 |
+| Taman | -7.65 | 111.52 |
 
 ---
 

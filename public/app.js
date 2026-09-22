@@ -16,7 +16,7 @@ function inMadiun(lat, lng) {
 
 const LOCATIONS = [
   { label: 'Kota Madiun', lat: -7.6245, lng: 111.525 },
-  { label: 'Caruban (Madiun Kab.)', lat: -7.5494, lng: 111.6403 },
+  { label: 'Caruban', lat: -7.5494, lng: 111.6403 },
   { label: 'Mejayan', lat: -7.5519, lng: 111.4536 },
   { label: 'Balerejo', lat: -7.5483, lng: 111.5597 },
   { label: 'Dagangan', lat: -7.6061, lng: 111.6244 },
@@ -27,9 +27,6 @@ const LOCATIONS = [
   { label: 'Taman', lat: -7.6503, lng: 111.5172 },
   { label: 'Wungu', lat: -7.6833, lng: 111.5167 },
   { label: 'Sawahan', lat: -7.5267, lng: 111.4697 },
-  { label: 'Ngawi', lat: -7.4025, lng: 111.4414 },
-  { label: 'Magetan', lat: -7.6569, lng: 111.3303 },
-  { label: 'Ponorogo', lat: -7.8664, lng: 111.4667 },
 ];
 
 function locationSelectHtml(opts = {}) {
