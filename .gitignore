@@ -11,3 +11,4 @@ js/
 *.html
 !public/*.html
 render.yaml.bak
+.vercel

@@ -1,6 +1,68 @@
-# Food Rescue AI — Panduan Deploy (Render)
+# Food Rescue AI — Deploy ke Vercel (Gratis, tanpa kartu)
 
-## ▶️ Jalankan Lokal
+## Arsitektur
+
+| Layer | Lokal | Online (Vercel) |
+|-------|-------|-----------------|
+| Runtime | Node.js | Vercel Serverless (Node) |
+| Database | SQLite `data/food_rescue.db` | **Turso** (SQLite cloud, gratis) |
+| Static | `public/` | `public/` via Vercel |
+| Foto | Base64 di database | Base64 di database (persist) |
+
+App otomatis pindah ke Turso jika env `TURSO_DATABASE_URL` terisi.
+
+---
+
+## 1. Buat Database Turso (gratis, ~2 menit)
+
+1. Buka **https://turso.tech** → **Sign up with GitHub**
+2. Dashboard → **Create Database**
+   - Name: `food-rescue-ai`
+   - Region: `ap-southeast-1` (Singapore) atau terdekat
+3. Buka halaman database → tab **Connect**
+4. Catat dua nilai ini:
+   - **URL** → `libsql://food-rescue-ai-xxx.turso.io`
+   - **Auth token** → string panjang `eyJ...`
+
+Atau pakai CLI (opsional):
+```bash
+turso db create food-rescue-ai
+turso db show food-rescue-ai --url
+turso db tokens create food-rescue-ai
+```
+
+---
+
+## 2. Deploy ke Vercel (tanpa kartu)
+
+1. Buka **https://vercel.com** → **Sign up with GitHub**
+2. Klik **Add New… → Project**
+3. Import repo **`naylaaurellia18-web/food-rescue-ai`** → **Import**
+4. Di **Environment Variables** isi:
+
+   | Key | Value |
+   |-----|-------|
+   | `TURSO_DATABASE_URL` | URL Turso dari langkah 1 |
+   | `TURSO_AUTH_TOKEN` | Auth token Turso |
+   | `JWT_SECRET` | string acak panjang (bebas, mis. `rahasia-kuliah-2026-xxxx`) |
+
+5. **Build & Deploy** → tunggu 1–2 menit
+6. Dapat URL: `https://food-rescue-ai-xxx.vercel.app` 🎉
+
+> **Pertama kali jalan:** app otomatis bikin tabel + isi data demo di Turso.
+
+---
+
+## 3. Verifikasi
+
+Buka URL Vercel → login `admin@foodrescue.id` / `admin123` → jalankan AI Matching.
+
+Cek health: `https://-URL-KAMU-/api/health`  
+Harus: `{"status":"ok","db":"turso"}`
+
+---
+
+## 4. Jalankan Lokal (tetap bisa)
 
 ```powershell
 cd C:\Users\nuy07\food-rescue-ai
@@ -8,9 +70,17 @@ npm install
 npm start
 ```
 
-Buka **http://localhost:3000**
+http://localhost:3000 — pakai SQLite lokal (tanpa Turso).
 
-**Akun demo:**
+Uji end-to-end:
+
+```powershell
+npm run test:e2e
+```
+
+---
+
+## Akun Demo
 
 | Role | Email | Password |
 |------|-------|----------|
@@ -19,86 +89,28 @@ Buka **http://localhost:3000**
 | Penerima | penerima@foodrescue.id | penerima123 |
 | Kurir | kurir@foodrescue.id | kurir123 |
 
-Database SQLite otomatis dibuat + di-seed saat pertama jalan (jika `data/food_rescue.db` kosong).
+---
+
+## Troubleshooting
+
+| Masalah | Solusi |
+|---------|--------|
+| 500 di Vercel | Cek Environment Variables (terutama `TURSO_*`) di Vercel → Settings → Environment Variables → Redeploy |
+| Tabel tidak ada | Hapus `TURSO_DATABASE_URL` → deploy ulang? Tidak — biarkan, app auto-create saat boot |
+| Reset data demo | Turso dashboard → SQL: `DELETE FROM users;` dll, atau biarkan — cukup buat user baru |
+| Foto terlalu besar | Limit upload 1 MB; foto disimpan base64 di kolom `photo_path` |
+| Database lokal korup | Hapus `data/food_rescue.db*` lalu `npm start` (auto-seed) |
 
 ---
 
-## 🚀 Deploy ke Render (Gratis)
-
-### Prasyarat
-- Akun [GitHub](https://github.com)
-- Akun [Render](https://render.com) (bisa daftar pakai GitHub)
-
-### Langkah 1 — Push ke GitHub
-
-Dari folder proyek:
-
-```powershell
-cd C:\Users\nuy07\food-rescue-ai
-git add -A
-git commit -m "Food Rescue AI: AI Matching + GIS"
-```
-
-Buat repo baru di GitHub (https://github.com/new), lalu:
-
-```powershell
-git remote add origin https://github.com/USERNAME/food-rescue-ai.git
-git branch -M main
-git push -u origin main
-```
-
-> Ganti `USERNAME` dengan username GitHub-mu.  
-> Jika diminta login, gunakan **Personal Access Token** (bukan password) — buat di GitHub → Settings → Developer settings → Personal access tokens.
-
-### Langkah 2 — Buasi Service di Render
-
-1. Buka https://dashboard.render.com → **New +** → **Web Service**
-2. Connect repo `food-rescue-ai`
-3. Isi:
-   - **Name**: `food-rescue-ai` (atau bebas)
-   - **Runtime**: Node
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm start`
-   - **Plan**: Free
-4. Di bagian **Environment**, tambahkan:
-   - `JWT_SECRET` → klik **Generate** (atau isi string acak panjang)
-   - `NODE_ENV` → `production`
-5. Klik **Create Web Service**
-6. Tunggu build 1–2 menit → dapat URL seperti  
-   `https://food-rescue-ai-xxxx.onrender.com`
-
-> `render.yaml` di root repo sudah memuat konfigurasi di atas — Render bisa deteksi otomatis via **New + → Blueprint**.
-
-### Langkah 3 — Verifikasi
-
-Buka URL Render → login admin → jalankan AI Matching.
-
----
-
-## ⚠️ Catatan Penting (Render Free + SQLite)
-
-| Isu | Penjelasan | Solusi |
-|-----|------------|--------|
-| DB ephemeral | Filesystem Render free **hilang saat redeploy/restart** | Data demo di-seed ulang otomatis. Untuk tugas kuliah biasanya cukup. |
-| Upload foto hilang | `uploads/` juga ephemeral | Sama — untuk demo OK. |
-| Ingin data permanen | Butuh persistent disk (paid) atau pindah PostgreSQL | Opsional di luar scope tugas |
-
-Untuk **demo tugas kuliah**, seed otomatis saat server start sudah cukup — setiap deploy selalu ada data segar.
-
----
-
-## 🗄️ Lokasi Database (Lokal)
+## Struktur Deploy
 
 ```
-C:\Users\nuy07\food-rescue-ai\data\food_rescue.db
-```
-
-Bisa dibuka dengan [DB Browser for SQLite](https://sqlitebrowser.org/):
-
-Tabel: `users`, `food_listings`, `food_needs`, `matches`, `otp_codes`, `notifications`, `audit_logs`
-
-Reset data demo:
-
-```powershell
-npm run seed -- --force
+food-rescue-ai/
+├── api/index.js        ← entry Vercel (export Express app)
+├── vercel.json         ← config build + route
+├── server/app.js       ← Express app (shared lokal & Vercel)
+├── server/db.js        ← auto: Turso (cloud) / SQLite (lokal)
+├── public/             ← SPA frontend
+└── data/               ← SQLite lokal (tidak di-deploy)
 ```

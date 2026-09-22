@@ -4,12 +4,17 @@
   "description": "Platform redistribusi surplus makanan berbasis AI Matching & GIS",
   "main": "server/index.js",
   "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "seed": "node server/seed.js"
+    "seed": "node server/seed.js",
+    "test:e2e": "node e2e-test.js"
   },
   "dependencies": {
+    "@libsql/client": "^0.15.0",
     "bcryptjs": "^2.4.3",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",

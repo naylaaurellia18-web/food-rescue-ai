@@ -6,28 +6,39 @@ const router = express.Router();
 
 router.use(authenticate);
 
-router.get('/', (req, res) => {
-  const rows = db
-    .prepare(
-      `SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`
-    )
-    .all(req.user.id);
-  res.json(rows);
+router.get('/', async (req, res, next) => {
+  try {
+    const rows = await db.all(
+      `SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`,
+      [req.user.id]
+    );
+    res.json(rows);
+  } catch (e) {
+    next(e);
+  }
 });
 
-router.post('/:id/read', (req, res) => {
-  db.prepare(`UPDATE notifications SET read_at = datetime('now') WHERE id = ? AND user_id = ?`).run(
-    req.params.id,
-    req.user.id
-  );
-  res.json({ message: 'OK' });
+router.post('/:id/read', async (req, res, next) => {
+  try {
+    await db.run(`UPDATE notifications SET read_at = datetime('now') WHERE id = ? AND user_id = ?`, [
+      req.params.id,
+      req.user.id,
+    ]);
+    res.json({ message: 'OK' });
+  } catch (e) {
+    next(e);
+  }
 });
 
-router.post('/read-all', (req, res) => {
-  db.prepare(
-    `UPDATE notifications SET read_at = datetime('now') WHERE user_id = ? AND read_at IS NULL`
-  ).run(req.user.id);
-  res.json({ message: 'OK' });
+router.post('/read-all', async (req, res, next) => {
+  try {
+    await db.run(`UPDATE notifications SET read_at = datetime('now') WHERE user_id = ? AND read_at IS NULL`, [
+      req.user.id,
+    ]);
+    res.json({ message: 'OK' });
+  } catch (e) {
+    next(e);
+  }
 });
 
 module.exports = router;

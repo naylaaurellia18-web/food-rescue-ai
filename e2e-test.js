@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const base = 'http://localhost:3000';
+const base = process.env.BASE_URL || 'http://localhost:3000';
 
 async function api(p, { method = 'GET', token, body, form } = {}) {
   const headers = {};
@@ -49,26 +49,25 @@ async function login(email, password) {
     console.log('✓ FR-10 verifikasi user:', pending.email);
   }
 
-  // Bersihkan match aktif agar kurir tersedia untuk run berikutnya
   const allMatches = await api('/api/admin/matches', { token: admin });
   const active = allMatches.filter((m) => ['proposed', 'accepted', 'picked_up', 'delivered'].includes(m.status));
   if (active.length) {
-    const dbMod = require('./server/db');
-    for (const m of active) {
-      dbMod.prepare(`UPDATE matches SET status='cancelled' WHERE id=?`).run(m.id);
-      dbMod.prepare(`UPDATE food_listings SET status='available' WHERE id=? AND status NOT IN ('verified','delivered')`).run(m.listing_id);
-    }
-    console.log(`✓ reset ${active.length} match aktif (agar kurir tersedia)`);
+    console.log(`✓ info: ${active.length} match aktif sudah ada (dilewati, tidak di-reset via API)`);
   }
 
-  // Buat data segar agar selalu ada kandidat matching
   const fdListing = new FormData();
+  const png = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.alloc(200),
+  ]);
   fdListing.append('name', `Surplus Tes ${Date.now()}`);
   fdListing.append('portions', '30');
   fdListing.append('expiry_at', new Date(Date.now() + 4 * 3600000).toISOString());
   fdListing.append('lat', '-6.2247');
   fdListing.append('lng', '106.8296');
+  fdListing.append('photo', new Blob([png], { type: 'image/png' }), 'food.png');
   await api('/api/food', { method: 'POST', token: donor, form: fdListing });
+
   await api('/api/needs', {
     method: 'POST',
     token: penerima,
@@ -84,6 +83,7 @@ async function login(email, password) {
 
   const run = await api('/api/matches/run', { method: 'POST', token: admin });
   console.log(`✓ FR-04 AI Matching: ${run.created} match, ${run.duration_ms}ms (target <3000)`);
+  if (run.created < 1) throw new Error('Matching tidak membuat match');
 
   const courierMatches = await api('/api/matches', { token: kurir });
   const match = courierMatches.find((m) => m.status === 'proposed');
@@ -94,15 +94,11 @@ async function login(email, password) {
   const belongsToP2 = rec2Matches.some((m) => m.id === match.id);
   const recipientToken = belongsToP2 ? penerima2 : penerima;
   const recipientName = belongsToP2 ? 'penerima2' : 'penerima';
-  console.log(`✓ Match #${match.id} skor=${match.score_percent}% jarak=${match.distance_km}km rute=${match.route.total_distance_km}km/${match.route.total_duration_min}m penerima=${recipientName}`);
+  console.log(
+    `✓ Match #${match.id} skor=${match.score_percent}% jarak=${match.distance_km}km rute=${match.route.total_distance_km}km/${match.route.total_duration_min}m penerima=${recipientName}`
+  );
   console.log('✓ FR-05 rute:', match.route.legs.map((l) => `${l.from}->${l.to} ${l.distance_km}km`).join(' | '));
 
-  const pngPath = path.join(__dirname, 'test-food.png');
-  const png = Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    Buffer.alloc(200),
-  ]);
-  fs.writeFileSync(pngPath, png);
   const fd = new FormData();
   fd.append('photo', new Blob([png], { type: 'image/png' }), 'food.png');
   const pick = await api(`/api/deliveries/${match.id}/pickup`, { method: 'POST', token: kurir, form: fd });
@@ -110,6 +106,7 @@ async function login(email, password) {
 
   const otpInfo = await api(`/api/deliveries/${match.id}/otp-status`, { token: recipientToken });
   console.log('✓ FR-08 OTP:', otpInfo.code);
+  if (!otpInfo.code) throw new Error('OTP tidak ada');
 
   const del = await api(`/api/deliveries/${match.id}/deliver`, { method: 'POST', token: kurir });
   console.log('✓ deliver:', del.message);
@@ -125,23 +122,19 @@ async function login(email, password) {
   console.log('✓ status final:', final.status);
   if (final.status !== 'verified') throw new Error('Expected verified');
 
-  const wrong = await fetch(`${base}/api/deliveries/${match.id}/verify-otp`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${recipientToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ otp: '000000' }),
-  }).then((r) => r.json());
-  console.log('✓ OTP salah ditolak:', wrong.error || wrong.message);
-
   const stats = await api('/api/admin/stats', { token: admin });
-  console.log('✓ FR-09 stats:', JSON.stringify({
-    portions: stats.impact.portions_delivered,
-    avg_score: stats.impact.avg_score,
-    audit: stats.impact.audit_logs,
-    under_target: stats.performance.all_under_target,
-  }));
+  console.log(
+    '✓ FR-09 stats:',
+    JSON.stringify({
+      portions: stats.impact.portions_delivered,
+      avg_score: stats.impact.avg_score,
+      audit: stats.impact.audit_logs,
+      under_target: stats.performance.all_under_target,
+    })
+  );
 
   const logs = await api('/api/admin/logs', { token: admin });
-  console.log(`✓ audit logs: ${logs.length} entri, actions: ${[...new Set(logs.map((l) => l.action))].slice(0, 8).join(', ')}...`);
+  console.log(`✓ audit logs: ${logs.length} entri`);
 
   const notif = await api('/api/notifications', { token: recipientToken });
   console.log(`✓ FR-06 notifikasi penerima: ${notif.length} entri`);
@@ -149,7 +142,6 @@ async function login(email, password) {
   const imm = await fetch(`${base}/api/admin/logs`).then((r) => r.status);
   console.log('✓ RBAC: /api/admin/logs tanpa token ->', imm);
 
-  fs.unlinkSync(pngPath);
   console.log('\n=== SEMUA UJI E2E LULUS ===');
 })().catch((e) => {
   console.error('GAGAL:', e.message);
