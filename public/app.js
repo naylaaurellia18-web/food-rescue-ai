@@ -122,9 +122,148 @@ function statusTag(s) {
     active: ['tag-green', 'Aktif'], rejected: ['tag-red', 'Ditolak'],
     critical: ['tag-red', 'Kritis'], high: ['tag-yellow', 'Tinggi'],
     medium: ['tag-blue', 'Sedang'], low: ['tag-gray', 'Rendah'],
+    wet: ['tag-blue', 'Makanan Basah'], dry: ['tag-yellow', 'Makanan Kering'],
   };
   const [cls, label] = map[s] || ['tag-gray', s];
   return `<span class="tag ${cls}">${label}</span>`;
+}
+
+const FOOD_TYPE_LABEL = { wet: 'Makanan Basah', dry: 'Makanan Kering' };
+
+const SOP = {
+  wet: {
+    title: 'SOP Makanan Basah',
+    warn: 'Makanan basah mudah basi & tumbuh bakteri — utamakan rantai dingin dan waktu singkat.',
+    sections: [
+      {
+        title: 'Packing',
+        items: [
+          'Gunakan wadah food-grade tertutup rapat (container/box mika bersegel)',
+          'Pisahkan makanan matang dan mentah — jangan dicampur',
+          'Label wadah: nama makanan, jam produksi/jam sisa, expiry, porsi',
+          'Bungkus with ice gel/cold pack bila suhu harus tetap dingin',
+          'Hindari kertas koran / wadah terbuka saat pengantaran',
+        ],
+      },
+      {
+        title: 'Penyimpanan',
+        items: [
+          'Suhu penyimpanan ≤ 5°C (chiller) atau ≤ -18°C (freezer) bila bisa',
+          'Bila tidak ada chiller: simpan di tempat paling dingin, maksimal 2 jam sebelum pickup',
+          'Jangan simpan di bawah matahari / ruang panas dapur',
+          'Simpan berdasarkan FEFO (First Expired, First Out)',
+        ],
+      },
+      {
+        title: 'Suhu & Rentang Aman',
+        items: [
+          'Zona berbahaya 5°C–60°C — makanan basah jangan lama di rentang ini',
+          'Target: dari dapur → kurir → penerima dalam ≤ 4 jam (ideal ≤ 2 jam)',
+          'Saat tiba, penerima cek bau, tekstur, dan suhu — bila ragu, jangan dikonsumsi',
+        ],
+      },
+      {
+        title: 'Hygiene & Transport',
+        items: [
+          'Cuci tangan / pakai sarung tangan saat mengemas',
+          'Dasar kendaraan bersih; makanan tidak bersentuhan langsung dengan lantai bagasi',
+          'Antar langsung — tidak boleh ditinggal di dashboard panas',
+          'Foto kondisi makanan saat pickup sebagai bukti chain-of-custody',
+        ],
+      },
+    ],
+  },
+  dry: {
+    title: 'SOP Makanan Kering',
+    warn: 'Makanan kering lebih tahan lama, tapi tetap jaga kelembapan & kemasan utuh.',
+    sections: [
+      {
+        title: 'Packing',
+        items: [
+          'Pakai kemasan asli yang masih utuh, atau ziplock/foil food-grade',
+          'Pastikan kemasan tidak sobek, bocor, atau lembap',
+          'Gabungkan item serupa dalam kardus/kotak bertumpuk rapi',
+          'Label: nama produk, expiry/best before, jumlah, kondisi kemasan',
+        ],
+      },
+      {
+        title: 'Penyimpanan',
+        items: [
+          'Simpan kering, sejuk, teduh — hindari kelembapan tinggi',
+          'Jauhkan dari bau menyengat (mis. deterjen, bensin) agar tidak menyerap aroma',
+          'Angin-anginkan gudang; jangan menumpuk menempel lantai lembap',
+          'Rotasi stok FEFO — yang expiry paling dekat didahulukan',
+        ],
+      },
+      {
+        title: 'Rentang Aman',
+        items: [
+          'Umumnya aman di suhu ruang selama kemasan tersegel',
+          'Hindari suhu ekstrem & sinar matahari langsung (bisa mencairkan/rusak)',
+          'Cek expiry sebelum listing; expired tidak boleh didistribusikan',
+        ],
+      },
+      {
+        title: 'Hygiene & Transport',
+        items: [
+          'Kemas lapis luar bersih; jangan taruh di bagasi basah',
+          'Pisahkan dari makanan basah saat dijadikan satu rute',
+          'Foto kemasan utuh saat pickup',
+        ],
+      },
+    ],
+  },
+};
+
+function foodTypeTag(t) {
+  if (t !== 'wet' && t !== 'dry') return '—';
+  return statusTag(t);
+}
+
+function sopHtml(type, { compact = false } = {}) {
+  const s = SOP[type];
+  if (!s) return '';
+  if (compact) {
+    return `
+    <div class="sop sop-compact sop-${type}">
+      <div class="sop-head">${icon('shield', 14)} <strong>${s.title}</strong> ${foodTypeTag(type)}</div>
+      <ul class="sop-list">
+        ${s.sections.flatMap((sec) => sec.items.slice(0, 2)).slice(0, 6).map((i) => `<li>${esc(i)}</li>`).join('')}
+      </ul>
+    </div>`;
+  }
+  return `
+  <div class="sop sop-${type}" data-sop="${type}">
+    <div class="sop-head">
+      ${icon('shield', 16)}
+      <div>
+        <strong>${s.title}</strong>
+        <div class="sop-warn">${esc(s.warn)}</div>
+      </div>
+      <span class="sop-badge">${type === 'wet' ? icon('refresh', 14) + ' Rantai dingin' : icon('package', 14) + ' Jaga kering'}</span>
+    </div>
+    <div class="sop-grid">
+      ${s.sections.map((sec) => `
+        <div class="sop-sec">
+          <div class="sop-sec-title">${esc(sec.title)}</div>
+          <ul class="sop-list">
+            ${sec.items.map((i) => `<li>${icon('check', 12)}<span>${esc(i)}</span></li>`).join('')}
+          </ul>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function bindSopToggle(root = document) {
+  const sel = root.querySelector('[name="food_type"]');
+  const box = root.querySelector('#sopBox');
+  if (!sel || !box) return;
+  const paint = () => {
+    const t = sel.value === 'dry' ? 'dry' : 'wet';
+    box.innerHTML = sopHtml(t);
+  };
+  sel.addEventListener('change', paint);
+  paint();
 }
 
 function logout() {
@@ -287,6 +426,7 @@ async function renderView() {
     view.innerHTML = fn ? await fn() : '<div class="empty">Halaman tidak ditemukan</div>';
     if (fn) {
       bindView();
+      bindSopToggle(view);
       if (currentTab === 'gis') initGisMap();
     }
   } catch (e) {
@@ -459,7 +599,7 @@ async function loadMapData() {
       fillOpacity: 0.95,
     })
       .bindPopup(
-        `<b>${esc(l.name)}</b><br>${l.portions} porsi · ${statusTag(l.status)}<br>` +
+        `<b>${esc(l.name)}</b><br>${l.portions} porsi · ${foodTypeTag(l.food_type)} · ${statusTag(l.status)}<br>` +
           `<span class="muted">Exp: ${fmtDate(l.expiry_at)}</span>`
       )
       .addTo(gisLayer);
@@ -772,7 +912,7 @@ async function renderAdminMatches() {
       ${rows.map(m => `
       <tr>
         <td class="muted">${m.id}</td>
-        <td><b>${esc(m.listing_name)}</b> (${m.portions} porsi)<br>→ ${esc(m.need_title)} ${statusTag(m.urgency)}<br><span class="muted">${esc(m.donor_name)} → ${esc(m.recipient_name)}</span></td>
+        <td><b>${esc(m.listing_name)}</b> (${m.portions} porsi) ${foodTypeTag(m.food_type)}<br>→ ${esc(m.need_title)} ${statusTag(m.urgency)}<br><span class="muted">${esc(m.donor_name)} → ${esc(m.recipient_name)}</span></td>
         <td>${esc(m.courier_name)}</td>
         <td>
           <b>${m.score_percent}%</b>
@@ -822,7 +962,13 @@ function renderDonorForm() {
     <form data-action="1" data-endpoint="/api/food" data-multipart="1">
       <label>Nama surplus</label>
       <input name="name" required placeholder="Buffet sarapan sisa" />
-      <label>Deskripsi</label>
+      <label>Jenis makanan</label>
+      <select name="food_type" required>
+        <option value="wet">Makanan Basah (nasi, lauk, sayur, buah potong, dairy…)</option>
+        <option value="dry">Makanan Kering (roti kemasan, keripik, biskuit, bahan kering…)</option>
+      </select>
+      <div id="sopBox" class="section-gap"></div>
+      <label class="section-gap">Deskripsi</label>
       <textarea name="description" rows="2" placeholder="Kondisi, jenis makanan…"></textarea>
       <div class="grid grid-2">
         <div><label>Jumlah porsi</label><input name="portions" type="number" min="1" required /></div>
@@ -850,13 +996,14 @@ async function renderDonorListings() {
     <div class="table-wrap">
     <table>
       <thead>
-        <tr><th>Foto</th><th>Nama</th><th>Porsi</th><th>Expiry</th><th>Status</th><th>Aksi</th></tr>
+        <tr><th>Foto</th><th>Nama</th><th>Jenis</th><th>Porsi</th><th>Expiry</th><th>Status</th><th>Aksi</th></tr>
       </thead>
       <tbody>
       ${rows.map(l => `
       <tr>
         <td>${l.photo_path ? `<img class="thumb" src="${l.photo_path}" alt="" />` : '—'}</td>
         <td><b>${esc(l.name)}</b><br><span class="muted">${esc(l.description || '')}</span></td>
+        <td>${foodTypeTag(l.food_type)}</td>
         <td>${l.portions}</td>
         <td class="muted">${fmtDate(l.expiry_at)}</td>
         <td>${statusTag(l.status)}</td>
@@ -865,6 +1012,18 @@ async function renderDonorListings() {
       </tbody>
     </table>
     </div>`}
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Panduan SOP penanganan</h2>
+        <div class="sub">Wajib dipatuhi donor &amp; kurir saat packing dan antar</div>
+      </div>
+    </div>
+    <div class="grid grid-2">
+      ${sopHtml('wet', { compact: true })}
+      ${sopHtml('dry', { compact: true })}
+    </div>
   </div>`;
 }
 
@@ -882,7 +1041,7 @@ async function renderDonorMatches() {
       <tbody>
       ${rows.map(m => `
       <tr>
-        <td><b>${esc(m.listing_name)}</b><br><span class="muted">${m.portions} porsi</span></td>
+        <td><b>${esc(m.listing_name)}</b> ${foodTypeTag(m.food_type)}<br><span class="muted">${m.portions} porsi</span></td>
         <td>${esc(m.need_title)}<br><span class="muted">${esc(m.recipient_name)}</span></td>
         <td>${esc(m.courier_name)}</td>
         <td><b>${m.score_percent ?? Number((m.score*100).toFixed(1))}%</b></td>
@@ -965,7 +1124,7 @@ async function renderRecipientMatches() {
       <div class="notif unread">
         <div class="spread">
           <div>
-            <div class="notif-title">${esc(m.listing_name)} — ${m.portions} porsi</div>
+            <div class="notif-title">${esc(m.listing_name)} — ${m.portions} porsi ${foodTypeTag(m.food_type)}</div>
             <span class="muted">Dari ${esc(m.donor_name)} · Kurir ${esc(m.courier_name)} · ${statusTag(m.status)}</span>
           </div>
         </div>
@@ -1004,11 +1163,12 @@ async function renderCourier() {
       <div class="notif unread">
         <div class="spread">
           <div>
-            <div class="notif-title">Match #${m.id}: ${esc(m.listing_name)} — ${m.portions} porsi</div>
+            <div class="notif-title">Match #${m.id}: ${esc(m.listing_name)} — ${m.portions} porsi ${foodTypeTag(m.food_type)}</div>
             <span class="muted">Untuk ${esc(m.need_title)} (${esc(m.recipient_name)}) · Urgensi ${m.urgency} · Skor ${m.score_percent ?? ''}%</span>
           </div>
           ${statusTag(m.status)}
         </div>
+        ${m.food_type === 'wet' || m.food_type === 'dry' ? sopHtml(m.food_type, { compact: true }) : ''}
         ${route ? `
         <div style="margin-top:12px">
           <div class="spread" style="margin-bottom:6px">

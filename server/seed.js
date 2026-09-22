@@ -85,15 +85,16 @@ async function seed({ force = false, full = false } = {}) {
 
     const inHours = (h) => new Date(Date.now() + h * 3600000).toISOString();
     const listings = [
-      [2, 'Buffet Sarapan Sisa', 'Nasi, lauk pauk — masih layak konsumsi', 40, inHours(3), -7.0288, 112.7403, 'available'],
-      [2, 'Roti & Pastry', 'Roti sobek, croissant', 25, inHours(8), -7.0288, 112.7403, 'available'],
-      [3, 'Nasi Box Acara', 'Sisa katering — 30 box', 30, inHours(5), -7.1471, 113.2471, 'available'],
-      [3, 'Sayur & Buah Segar', 'Sayur mayur dan buah potong', 20, inHours(12), -7.1471, 113.2471, 'available'],
+      [2, 'Buffet Sarapan Sisa', 'Nasi, lauk pauk — masih layak konsumsi', 'wet', 40, inHours(3), -7.0288, 112.7403, 'available'],
+      [2, 'Roti & Pastry', 'Roti sobek, croissant', 'dry', 25, inHours(8), -7.0288, 112.7403, 'available'],
+      [3, 'Nasi Box Acara', 'Sisa katering — 30 box', 'wet', 30, inHours(5), -7.1471, 113.2471, 'available'],
+      [3, 'Sayur & Buah Segar', 'Sayur mayur dan buah potong', 'wet', 20, inHours(12), -7.1471, 113.2471, 'available'],
+      [2, 'Biskuit & Keripik Cadangan', 'Kemasan foil utuh, simpan kering', 'dry', 50, inHours(48), -7.0288, 112.7403, 'available'],
     ];
     for (const l of listings) {
       await db.run(
-        `INSERT INTO food_listings (donor_id, name, description, portions, expiry_at, lat, lng, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO food_listings (donor_id, name, description, food_type, portions, expiry_at, lat, lng, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         l
       );
     }

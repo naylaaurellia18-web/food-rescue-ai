@@ -17,7 +17,7 @@ router.use(authenticate, requireActive);
 
 async function getMatch(id) {
   return db.get(
-    `SELECT m.*, l.donor_id, l.name AS listing_name, n.recipient_id, n.title AS need_title
+    `SELECT m.*, l.donor_id, l.name AS listing_name, l.food_type, n.recipient_id, n.title AS need_title
      FROM matches m
      JOIN food_listings l ON l.id = m.listing_id
      JOIN food_needs n ON n.id = m.need_id

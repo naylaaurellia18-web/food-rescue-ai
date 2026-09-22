@@ -22,6 +22,7 @@ const SCHEMA_STATEMENTS = [
     donor_id INTEGER NOT NULL REFERENCES users(id),
     name TEXT NOT NULL,
     description TEXT,
+    food_type TEXT NOT NULL DEFAULT 'wet' CHECK (food_type IN ('wet','dry')),
     portions INTEGER NOT NULL CHECK (portions > 0),
     expiry_at TEXT NOT NULL,
     photo_path TEXT,
@@ -124,6 +125,7 @@ async function init() {
       for (const sql of SCHEMA_STATEMENTS) {
         await cloudClient.execute(sql);
       }
+      await migrate(cloudClient, true);
       return;
     }
 
@@ -136,8 +138,23 @@ async function init() {
     for (const sql of SCHEMA_STATEMENTS) {
       localDb.exec(sql);
     }
+    await migrate(null, false);
   })();
   return readyPromise;
+}
+
+async function migrate(client, isCloud) {
+  const probes = [
+    `ALTER TABLE food_listings ADD COLUMN food_type TEXT NOT NULL DEFAULT 'wet'`,
+  ];
+  for (const sql of probes) {
+    try {
+      if (isCloud && client) await client.execute(sql);
+      else if (localDb) localDb.exec(sql);
+    } catch {
+      /* column already exists */
+    }
+  }
 }
 
 async function all(sql, params = []) {

@@ -24,7 +24,7 @@ router.use(authenticate, requireRole('donor', 'admin'), requireActive);
 
 router.post('/', upload.single('photo'), async (req, res, next) => {
   try {
-    const { name, description, portions, expiry_at, lat, lng } = req.body || {};
+    const { name, description, portions, expiry_at, lat, lng, food_type } = req.body || {};
     if (!name || !portions || !expiry_at) {
       return res.status(400).json({ error: 'name, portions, expiry_at wajib diisi' });
     }
@@ -32,15 +32,17 @@ router.post('/', upload.single('photo'), async (req, res, next) => {
     if (new Date(expiry_at).getTime() <= Date.now()) {
       return res.status(400).json({ error: 'Expiry time harus di masa depan' });
     }
+    const ftype = food_type === 'dry' ? 'dry' : food_type === 'wet' ? 'wet' : 'wet';
 
     const donor = await db.get('SELECT lat, lng FROM users WHERE id = ?', [req.user.id]);
     const result = await db.run(
-      `INSERT INTO food_listings (donor_id, name, description, portions, expiry_at, photo_path, lat, lng)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO food_listings (donor_id, name, description, food_type, portions, expiry_at, photo_path, lat, lng)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.user.id,
         name.trim(),
         description || null,
+        ftype,
         Number(portions),
         expiry_at,
         fileToDataUri(req.file),
@@ -49,7 +51,7 @@ router.post('/', upload.single('photo'), async (req, res, next) => {
       ]
     );
 
-    await audit(req.user.id, 'CREATE_LISTING', 'food_listings', result.lastInsertRowid, { name, portions });
+    await audit(req.user.id, 'CREATE_LISTING', 'food_listings', result.lastInsertRowid, { name, portions, food_type: ftype });
     res.status(201).json({ id: result.lastInsertRowid, message: 'Surplus makanan dicatat' });
   } catch (e) {
     next(e);

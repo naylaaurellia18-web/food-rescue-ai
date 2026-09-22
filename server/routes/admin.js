@@ -148,7 +148,7 @@ router.get('/logs', async (_req, res, next) => {
 router.get('/matches', async (_req, res, next) => {
   try {
     const rows = await db.all(
-      `SELECT m.*, l.name AS listing_name, l.portions, n.title AS need_title, n.urgency,
+      `SELECT m.*, l.name AS listing_name, l.food_type, l.portions, n.title AS need_title, n.urgency,
          dn.name AS donor_name, rn.name AS recipient_name, c.name AS courier_name
        FROM matches m
        JOIN food_listings l ON l.id = m.listing_id

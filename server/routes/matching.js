@@ -124,7 +124,7 @@ router.get('/', requireRole('admin', 'courier', 'donor', 'recipient'), async (re
     if (req.user.role === 'admin') {
       rows = await db.all(
         `SELECT m.*,
-           l.name AS listing_name, l.portions, l.expiry_at,
+           l.name AS listing_name, l.food_type, l.portions, l.expiry_at,
            dn.name AS donor_name, rn.name AS recipient_name, c.name AS courier_name,
            n.title AS need_title, n.urgency
          FROM matches m
@@ -137,7 +137,7 @@ router.get('/', requireRole('admin', 'courier', 'donor', 'recipient'), async (re
       );
     } else if (req.user.role === 'courier') {
       rows = await db.all(
-        `SELECT m.*, l.name AS listing_name, l.portions, l.expiry_at, l.photo_path AS listing_photo,
+        `SELECT m.*, l.name AS listing_name, l.food_type, l.portions, l.expiry_at, l.photo_path AS listing_photo,
            dn.name AS donor_name, dn.phone AS donor_phone, dn.address AS donor_address, dn.lat AS donor_lat, dn.lng AS donor_lng,
            rn.name AS recipient_name, rn.phone AS recipient_phone, rn.address AS recipient_address,
            rn.lat AS recipient_lat, rn.lng AS recipient_lng,
@@ -153,7 +153,7 @@ router.get('/', requireRole('admin', 'courier', 'donor', 'recipient'), async (re
       );
     } else if (req.user.role === 'donor') {
       rows = await db.all(
-        `SELECT m.*, l.name AS listing_name, l.portions, n.title AS need_title,
+        `SELECT m.*, l.name AS listing_name, l.food_type, l.portions, n.title AS need_title,
            rn.name AS recipient_name, c.name AS courier_name, n.urgency
          FROM matches m
          JOIN food_listings l ON l.id = m.listing_id
@@ -166,7 +166,7 @@ router.get('/', requireRole('admin', 'courier', 'donor', 'recipient'), async (re
       );
     } else {
       rows = await db.all(
-        `SELECT m.*, l.name AS listing_name, l.portions, n.title AS need_title,
+        `SELECT m.*, l.name AS listing_name, l.food_type, l.portions, n.title AS need_title,
            dn.name AS donor_name, c.name AS courier_name, n.urgency
          FROM matches m
          JOIN food_listings l ON l.id = m.listing_id
@@ -194,7 +194,7 @@ router.get('/', requireRole('admin', 'courier', 'donor', 'recipient'), async (re
 router.get('/:id', async (req, res, next) => {
   try {
     const m = await db.get(
-      `SELECT m.*, l.name AS listing_name, l.portions, l.expiry_at, l.donor_id,
+      `SELECT m.*, l.name AS listing_name, l.food_type, l.portions, l.expiry_at, l.donor_id,
          n.title AS need_title, n.recipient_id, n.urgency
        FROM matches m
        JOIN food_listings l ON l.id = m.listing_id
