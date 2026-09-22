@@ -789,13 +789,13 @@ function renderAuth() {
         <span>Food Rescue AI</span>
       </div>
       <div class="auth-hero">
-        <h2>Redistribusi surplus makanan dengan pencocokan AI &amp; peta</h2>
-        <p>Hubungkan donor, penerima manfaat, dan kurir — pantau rute pengantaran secara langsung.</p>
+        <h2>Salah satu makanan berlebih, berkah buat sesama</h2>
+        <p>Hubungkan donor, penerima manfaat, dan kurir dalam satu aplikasi — gratis dan mudah dipakai.</p>
         <ul class="auth-points">
-          <li><span class="tick">${icon('check', 12)}</span> Pencocokan multi-kriteria dalam hitungan milidetik</li>
-          <li><span class="tick">${icon('check', 12)}</span> Peta sebaran donor, penerima &amp; rute kurir</li>
+          <li><span class="tick">${icon('check', 12)}</span> Daftar cukup nama, email &amp; sandi</li>
+          <li><span class="tick">${icon('check', 12)}</span> Cocokkan surplus secara otomatis</li>
+          <li><span class="tick">${icon('check', 12)}</span> Pantau pengantaran di peta</li>
           <li><span class="tick">${icon('check', 12)}</span> Konfirmasi serah terima via OTP</li>
-          <li><span class="tick">${icon('check', 12)}</span> Catatan audit tidak dapat diubah</li>
         </ul>
       </div>
       <div class="auth-foot">Melayani distribusi pangan yang merata dan aman</div>
@@ -805,7 +805,7 @@ function renderAuth() {
       <div class="auth-card">
         <div class="eyebrow">Platform redistribusi pangan</div>
         <h1>Masuk ke akun Anda</h1>
-        <p class="sub">Gunakan email terdaftar, atau daftar sebagai donor, penerima, atau kurir.</p>
+        <p class="sub">Belum punya akun? Daftar gratis — cuma 4 langkah singkat.</p>
         <div class="auth-tabs">
           <button id="tabLogin" class="active" type="button">Masuk</button>
           <button id="tabReg" type="button">Daftar</button>
@@ -816,34 +816,50 @@ function renderAuth() {
           <label>Kata Sandi</label>
           <input name="password" type="password" required placeholder="••••••••" autocomplete="current-password" />
           <button class="btn btn-block" type="submit">${icon('arrowRight', 15)} Masuk</button>
+          <div class="demo-note">Coba langsung — Admin: <b>admin@foodrescue.id</b> / <b>admin123</b></div>
         </form>
         <form id="formReg" hidden data-action="1" data-endpoint="/api/auth/register">
           <label>Nama / Nama Organisasi</label>
           <input name="name" required placeholder="Masjid Jami' Kota Madiun" />
           <label>Email</label>
-          <input name="email" type="email" required autocomplete="email" />
+          <input name="email" type="email" required autocomplete="email" placeholder="nama@contoh.id" />
           <label>Kata Sandi</label>
-          <input name="password" type="password" minlength="6" required autocomplete="new-password" />
-          <label>Peran</label>
-          <select name="role" required>
-            <option value="donor">Donor (Hotel / Restoran / Ritel)</option>
-            <option value="recipient">Penerima Manfaat</option>
-            <option value="courier">Kurir / Relawan</option>
-          </select>
-          <label>Telepon</label>
-          <input name="phone" placeholder="08xxx" />
-          <label>Alamat</label>
-          <input name="address" placeholder="Jl. …, kota/kabupaten Anda" />
-          ${locationSelectHtml({ label: 'Lokasi domisili', hint: 'Untuk peta & perhitungan rute — pilih kota atau GPS' })}
-          <div id="courierField" hidden>
-            <label>Kapasitas Logistik (porsi)</label>
-            <input name="capacity" type="number" min="1" placeholder="50" />
+          <input name="password" type="password" minlength="6" required autocomplete="new-password" placeholder="minimal 6 karakter" />
+          <label>Saya mendaftar sebagai</label>
+          <div class="role-cards">
+            <label class="role-card">
+              <input type="radio" name="role" value="donor" checked />
+              <span class="role-card-body"><b>Donor</b><small>Punya makanan berlebih (hotel/resto/ritel)</small></span>
+            </label>
+            <label class="role-card">
+              <input type="radio" name="role" value="recipient" />
+              <span class="role-card-body"><b>Penerima</b><small>Butuh bantuan porsi makanan</small></span>
+            </label>
+            <label class="role-card">
+              <input type="radio" name="role" value="courier" />
+              <span class="role-card-body"><b>Kurir</b><small>Ingin jadi relawan pengantar</small></span>
+            </label>
           </div>
-          <div id="orgField">
-            <label>Nama Organisasi (opsional)</label>
-            <input name="org_name" placeholder="Hotel / Panti / Komunitas" />
-          </div>
-          <button class="btn btn-block" type="submit">Daftar — menunggu verifikasi admin</button>
+          <details class="more-details">
+            <summary>Informasi tambahan <span class="muted">(boleh dilewati)</span></summary>
+            <div class="more-details-body">
+              <label>Telepon</label>
+              <input name="phone" placeholder="08xxx" inputmode="tel" />
+              <label>Alamat</label>
+              <input name="address" placeholder="Jl. …, Madiun" />
+              ${locationSelectHtml({ label: 'Lokasi domisili', hint: 'Untuk peta & perhitungan rute — pilih kota atau GPS' })}
+              <div id="courierField" hidden>
+                <label>Kapasitas Logistik (porsi)</label>
+                <input name="capacity" type="number" min="1" placeholder="50" />
+              </div>
+              <div id="orgField">
+                <label>Nama Organisasi</label>
+                <input name="org_name" placeholder="Hotel / Panti / Komunitas" />
+              </div>
+            </div>
+          </details>
+          <button class="btn btn-block" type="submit">Daftar sekarang</button>
+          <p class="reg-note">Akun Anda perlu diverifikasi admin dulu sebelum bisa masuk — biasanya cepat.</p>
         </form>
       </div>
     </div>
@@ -900,20 +916,34 @@ function bindAuth() {
     try {
       const res = await api('/api/auth/register', { method: 'POST', body });
       toast(res.message);
-      tabLogin.click();
-      formLogin.email.value = body.email;
+      showRegSuccess(body.email);
     } catch (e) {
       toast(e.message, 'error');
     }
   });
 
-  formReg.role.addEventListener('change', () => {
-    const isCourier = formReg.role.value === 'courier';
-    document.getElementById('courierField').hidden = !isCourier;
-    document.getElementById('orgField').hidden = isCourier;
-  });
+  formReg.querySelectorAll('input[name="role"]').forEach((r) =>
+    r.addEventListener('change', () => {
+      const isCourier = formReg.role.value === 'courier';
+      document.getElementById('courierField').hidden = !isCourier;
+      document.getElementById('orgField').hidden = isCourier;
+    })
+  );
 
   bindLocationSelects(formReg);
+}
+
+function showRegSuccess(email) {
+  const card = document.querySelector('.auth-card');
+  if (!card) return;
+  card.innerHTML = `
+    <div class="auth-success">
+      <div class="auth-success-icon">${icon('check', 28)}</div>
+      <h1>Pendaftaran berhasil!</h1>
+      <p class="sub">Akun <b>${esc(email)}</b> sudah dibuat. <b>Menunggu verifikasi admin</b> dulu ya — setelah itu Anda bisa masuk.</p>
+      <button class="btn btn-block" id="backToLogin">${icon('arrowRight', 15)} Kembali ke halaman masuk</button>
+    </div>`;
+  document.getElementById('backToLogin').onclick = () => render();
 }
 
 /* ========== PAGES ========== */
