@@ -96,9 +96,30 @@ const NAV = {
   ],
 };
 
+function renderNav() {
+  const tabs = NAV[me?.role] || [];
+  const nav = document.getElementById('nav');
+  if (!nav) return;
+  nav.innerHTML = tabs
+    .map(
+      ([id, icon, label]) =>
+        `<button type="button" class="${currentTab === id ? 'active' : ''}" data-tab="${id}"><span>${icon}</span> ${label}</button>`
+    )
+    .join('');
+  nav.querySelectorAll('button[data-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => setTab(btn.dataset.tab));
+  });
+}
+
 function setTab(t) {
+  if (currentTab === t) {
+    closeSidebar();
+    return;
+  }
   currentTab = t;
   closeSidebar();
+  renderNav();
+  destroyMap();
   renderView();
 }
 
@@ -141,12 +162,7 @@ function render() {
 
   const tabs = NAV[me.role] || [];
   if (!currentTab || !tabs.find((t) => t[0] === currentTab)) currentTab = tabs[0][0];
-  document.getElementById('nav').innerHTML = tabs
-    .map(
-      ([id, icon, label]) =>
-        `<button type="button" class="${currentTab === id ? 'active' : ''}" onclick="setTab('${id}')"><span>${icon}</span> ${label}</button>`
-    )
-    .join('');
+  renderNav();
 
   renderView();
 }
@@ -258,7 +274,7 @@ async function renderGisMap() {
   const activeMatches = matches.filter((m) => !['cancelled'].includes(m.status));
 
   return `
-  <div class="page-title">🗺️ Peta GIS — Madura, Jawa Timur</div>
+  <div class="page-title"><span class="title-icon">🗺️</span> Peta GIS — Madura, Jawa Timur</div>
   <div class="card">
     <div class="spread">
       <h2 style="margin:0">Sebaran Donor · Penerima · Kurir · Rute</h2>
@@ -504,7 +520,7 @@ async function renderAdminDashboard() {
     s.listings.total === 0 && s.needs.total === 0 && s.matches.total === 0 && s.users.total <= 1;
 
   return `
-  <div class="page-title">📊 Dashboard Monitoring</div>
+  <div class="page-title"><span class="title-icon">📊</span> Dashboard</div>
   ${isEmpty ? `
   <div class="empty" style="margin-bottom:16px">
     <b>Web masih kosong — siap diisi dari nol.</b><br>
@@ -514,7 +530,7 @@ async function renderAdminDashboard() {
   <div class="card">
     <div class="spread">
       <h2 style="margin:0">Status Sistem</h2>
-      <button class="btn" data-post="/api/matches/run">▶ Jalankan AI Matching (FR-04)</button>
+      <button class="btn" data-post="/api/matches/run">▶ Jalankan AI Matching</button>
     </div>
     <p class="muted" style="margin-top:8px">Target matching &lt; 3.000 ms — last run: ${runs[0]?.duration_ms ?? '-'} ms ${s.performance.all_under_target ? '✅' : ''}</p>
   </div>
@@ -561,7 +577,7 @@ async function renderAdminDashboard() {
 async function renderAdminUsers() {
   const users = await api('/api/admin/users');
   return `
-  <div class="page-title">👥 Kelola Pengguna (FR-10)</div>
+  <div class="page-title"><span class="title-icon">👥</span> Pengguna</div>
   <div class="card">
     ${users.length <= 1 ? '<div class="empty">Belum ada pengguna selain admin. Ajukan registrasi dari halaman login.</div>' : `
     <table>
@@ -586,7 +602,7 @@ async function renderAdminUsers() {
 async function renderAdminMatches() {
   const rows = await api('/api/admin/matches');
   return `
-  <div class="page-title">🤖 AI Matching &amp; Alokasi (FR-04)</div>
+  <div class="page-title"><span class="title-icon">🤖</span> AI Matching</div>
   <div class="card">
     <div class="spread">
       <h2 style="margin:0">Hasil Matching</h2>
@@ -615,7 +631,7 @@ async function renderAdminMatches() {
 async function renderAdminLogs() {
   const logs = await api('/api/admin/logs');
   return `
-  <div class="page-title">📜 Audit Log Immutable</div>
+  <div class="page-title"><span class="title-icon">📜</span> Audit Log</div>
   <div class="card">
     ${logs.length === 0 ? '<div class="empty">Belum ada aktivitas tercatat.</div>' : `
     <table>
@@ -635,7 +651,7 @@ async function renderAdminLogs() {
 
 function renderDonorForm() {
   return `
-  <div class="page-title">📦 Input Surplus Makanan (FR-02)</div>
+  <div class="page-title"><span class="title-icon">📦</span> Input Surplus Makanan</div>
   <div class="card">
     <form data-action="1" data-endpoint="/api/food" data-multipart="1">
       <label>Nama Surplus</label>
@@ -660,7 +676,7 @@ function renderDonorForm() {
 async function renderDonorListings() {
   const rows = await api('/api/food');
   return `
-  <div class="page-title">📋 Listing Surplus Saya</div>
+  <div class="page-title"><span class="title-icon">📋</span> Listing Surplus Saya</div>
   <div class="card">
     ${rows.length === 0 ? '<div class="empty">Belum ada listing. Input surplus terlebih dahulu.</div>' : `
     <table>
@@ -681,7 +697,7 @@ async function renderDonorListings() {
 async function renderDonorMatches() {
   const rows = await api('/api/matches');
   return `
-  <div class="page-title">🔗 Match Surplus Saya</div>
+  <div class="page-title"><span class="title-icon">🔗</span> Match Surplus Saya</div>
   <div class="card">
     ${rows.length === 0 ? '<div class="empty">Belum ada match — tunggu admin menjalankan AI Matching.</div>' : `
     <table>
@@ -701,7 +717,7 @@ async function renderDonorMatches() {
 async function renderRecipientForm() {
   const needsList = await renderRecipientNeedsList();
   return `
-  <div class="page-title">🙏 Kebutuhan Pangan (FR-03)</div>
+  <div class="page-title"><span class="title-icon">🙏</span> Kebutuhan Pangan</div>
   <div class="card">
     <form data-action="1" data-endpoint="/api/needs">
       <label>Judul Kebutuhan</label>
@@ -754,7 +770,7 @@ async function renderRecipientMatches() {
   const rows = await api('/api/matches');
   const ready = rows.filter((m) => ['picked_up', 'delivered'].includes(m.status));
   return `
-  <div class="page-title">🔐 Konfirmasi Penerimaan via OTP (FR-08)</div>
+  <div class="page-title"><span class="title-icon">🔐</span> Konfirmasi OTP</div>
   <div class="card">
     <h2>Menunggu Konfirmasi</h2>
     ${ready.length === 0 ? '<div class="empty">Belum ada kiriman menunggu konfirmasi OTP.</div>' : ready.map((m) => `
@@ -785,7 +801,7 @@ async function renderCourier() {
   const rows = await api('/api/matches');
   const active = rows.filter((m) => ['proposed', 'accepted', 'picked_up', 'delivered'].includes(m.status));
   return `
-  <div class="page-title">🚚 Tugas Kurir (FR-05 · FR-07 · FR-08)</div>
+  <div class="page-title"><span class="title-icon">🚚</span> Tugas Kurir</div>
   <div class="card">
     <h2>Tugas Aktif</h2>
     ${active.length === 0 ? '<div class="empty">Belum ada tugas. Minta admin menjalankan AI Matching.</div>' : active.map((m) => {
@@ -809,7 +825,7 @@ async function renderCourier() {
         <div class="row" style="margin-top:10px">
           ${['proposed', 'accepted'].includes(m.status) ? `
             <form id="pickup-${m.id}" data-action="1" data-endpoint="/api/deliveries/${m.id}/pickup" data-multipart="1">
-              <label>📷 Foto kondisi makanan (FR-07, wajib, max 1MB)</label>
+              <label>📷 Foto kondisi makanan (wajib, max 1MB)</label>
               <input type="file" name="photo" accept="image/*" required style="margin:0" />
               <button class="btn btn-sm" type="submit" style="margin-top:8px">Upload &amp; Pickup</button>
             </form>
@@ -834,7 +850,7 @@ async function renderCourier() {
 async function renderNotif() {
   const rows = await api('/api/notifications');
   return `
-  <div class="page-title">🔔 Notifikasi (FR-06)</div>
+  <div class="page-title"><span class="title-icon">🔔</span> Notifikasi</div>
   <div class="card">
     <div class="spread">
       <h2 style="margin:0">Inbox</h2>

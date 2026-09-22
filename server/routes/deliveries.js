@@ -42,7 +42,7 @@ router.post('/:id/pickup', upload.single('photo'), requireRole('courier', 'admin
     if (!['proposed', 'accepted'].includes(match.status)) {
       return res.status(400).json({ error: `Status ${match.status} tidak bisa di-pickup` });
     }
-    if (!req.file) return res.status(400).json({ error: 'Foto kondisi makanan wajib diupload (FR-07)' });
+    if (!req.file) return res.status(400).json({ error: 'Foto kondisi makanan wajib diupload' });
 
     const photoUri = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
 
