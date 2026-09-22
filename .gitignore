@@ -1,0 +1,13 @@
+node_modules/
+data/
+.env
+*.log
+uploads/*
+!uploads/.gitkeep
+backend/
+frontend/
+css/
+js/
+*.html
+!public/*.html
+render.yaml.bak

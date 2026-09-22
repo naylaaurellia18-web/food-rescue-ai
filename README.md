@@ -1,0 +1,142 @@
+# Food Rescue AI
+
+Platform redistribusi surplus makanan berbasis **AI Matching & GIS** — menghubungkan Donor, Penerima Manfaat, Kurir/Relawan, dan Admin.
+
+Dibangun untuk tugas kuliah sesuai dokumen SKPL (10 FR + 8 NFR).
+
+## Tech Stack
+
+| Layer | Teknologi |
+|-------|-----------|
+| Backend | Node.js 24 + Express |
+| Database | SQLite (`node:sqlite` built-in, tanpa install) |
+| Auth | JWT + bcrypt (RBAC 4 role) |
+| Frontend | SPA HTML/CSS/JS (tanpa build tool) |
+| GIS | Haversine distance + estimasi durasi rute |
+| Upload | Multer (foto surplus & foto serah terima) |
+
+## Cara Menjalankan
+
+```bash
+npm install
+npm run seed        # data demo
+npm start           # http://localhost:3000
+```
+
+Uji end-to-end otomatis:
+
+```bash
+node e2e-test.js
+```
+
+## Akun Demo
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@foodrescue.id | admin123 |
+| Donor | donor@foodrescue.id | donor123 |
+| Penerima | penerima@foodrescue.id | penerima123 |
+| Kurir | kurir@foodrescue.id | kurir123 |
+
+## Alur End-to-End
+
+1. **Donor** login → Input surplus makanan (FR-02, foto + expiry + porsi)
+2. **Penerima** login → Update kebutuhan + urgensi (FR-03)
+3. **Admin** klik **Jalankan AI Matching** (FR-04) → skor multi-kriteria, < 3 detik
+4. **Kurir** menerima notifikasi (FR-06) → lihat rute GIS (FR-05) → upload foto kondisi makanan (FR-07) → pickup → deliver
+5. **Penerima** konfirmasi serah terima via **OTP 6 digit** (FR-08)
+6. **Admin** pantau dashboard analitik (FR-09), kelola pengguna (FR-10), audit log immutable
+
+## Skema Database (ERD)
+
+```
+users 1────∞ food_listings 1────1 matches ∞────1 food_needs ∞────1 users (recipient)
+                  │                  │
+                  │                  ∞
+                  │             otp_codes
+                  │             notifications
+                  ∞
+             (photo_path)
+
+users 1────∞ matches (courier_id)
+audit_logs (immutable — trigger BLOCK UPDATE & DELETE)
+```
+
+### Tabel
+
+| Tabel | Fungsi |
+|-------|--------|
+| `users` | 4 role (donor/recipient/courier/admin), status pending→active, lat/lng, kapasitas kurir |
+| `food_listings` | FR-02 surplus makanan: nama, porsi, expiry, foto, status |
+| `food_needs` | FR-03 kebutuhan pangan + urgensi (low→critical) |
+| `matches` | Hasil FR-04: skor total + 4 sub-skor, jarak, rute JSON, status alur |
+| `otp_codes` | FR-08 OTP 6 digit, expiry 30 menit, sekali pakai |
+| `notifications` | FR-06 notifikasi per user |
+| `audit_logs` | Log immutable (trigger SQLite cegah UPDATE/DELETE) |
+
+## Algoritma AI Matching (FR-04)
+
+**Bobot multi-kriteria:**
+
+| Kriteria | Bobot | Skor |
+|----------|-------|------|
+| Expiry time makanan | 0.35 | ≤2 jam = 1.0 … >24 jam = 0.3 (makin mendesak, makin diprioritaskan) |
+| Jarak GIS | 0.30 | ≤1 km = 1.0 … ≥30 km = 0 (jarak total: kurir→donor→penerima) |
+| Urgensi penerima | 0.20 | critical=1.0, high=0.75, medium=0.5, low=0.25 |
+| Kapasitas kurir | 0.15 | porsi ≤ kapasitas = 1.0 … >1.5× kapasitas = 0.2 |
+
+```
+score = 0.35·expiry + 0.30·distance + 0.20·urgency + 0.15·capacity
+```
+
+**Algoritma:** generate semua triplet (listing × need × courier) yang valid → filter jarak ≤30 km & score ≥0.3 → **greedy assignment** urut skor tertinggi (satu listing / need / courier hanya sekali) → simpan match + rute + notifikasi.
+
+**Performa:** diukur per run, target **< 3.000 ms** (hasil demo ~1–25 ms).
+
+## Peta FR → Implementasi
+
+| FR | Endpoint / Lokasi |
+|----|-------------------|
+| FR-01 | `POST /api/auth/register`, `POST /api/auth/login`, middleware RBAC `server/middleware.js` |
+| FR-02 | `POST /api/food` (multipart, foto) |
+| FR-03 | `POST /api/needs`, `PATCH /api/needs/:id` |
+| FR-04 | `POST /api/matches/run` → `server/lib/matching.js` |
+| FR-05 | `server/lib/gis.js` (haversine + waypoint legs) |
+| FR-06 | `GET /api/notifications`, auto-notify saat match/pickup/OTP |
+| FR-07 | `POST /api/deliveries/:id/pickup` (foto wajib) |
+| FR-08 | `POST /api/deliveries/:id/verify-otp` |
+| FR-09 | `GET /api/admin/stats` + halaman Dashboard |
+| FR-10 | `GET/PATCH/DELETE /api/admin/users` |
+
+## NFR yang Dipenuhi
+
+- **Keamanan** — bcrypt (10 rounds), JWT 12h, RBAC, akun aktif setelah verifikasi admin
+- **Performa** — matching < 3 detik (di-log di audit)
+- **Auditabilitas** — `audit_logs` dengan trigger immutable SQLite
+- **Portabilitas** — web SPA responsif (Admin desktop; Donor/Penerima/Kurir bisa via mobile browser)
+- **Skalabilitas** — stateless JWT; SQLite WAL untuk demo; siap migrasi PostgreSQL
+
+## Struktur Proyek
+
+```
+food-rescue-ai/
+├── package.json
+├── server/
+│   ├── index.js          # entry Express
+│   ├── db.js             # skema SQLite + trigger immutable
+│   ├── seed.js           # data demo
+│   ├── middleware.js      # auth + RBAC
+│   ├── lib/
+│   │   ├── auth.js       # bcrypt + JWT + OTP
+│   │   ├── gis.js        # haversine + rute
+│   │   ├── matching.js   # algoritma multi-kriteria
+│   │   └── audit.js      # audit + notifikasi
+│   └── routes/
+│       ├── auth.js  food.js  needs.js
+│       ├── matching.js  deliveries.js
+│       ├── notifications.js  admin.js
+├── public/               # SPA frontend
+├── uploads/              # foto
+├── data/                 # food_rescue.db
+└── e2e-test.js           # uji alur lengkap
+```
