@@ -16,6 +16,20 @@ const adminRoutes = require('./routes/admin');
 
 const app = express();
 app.set('trust proxy', 1);
+app.use((_req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'geolocation=(self), camera=(), microphone=()',
+    'Cross-Origin-Opener-Policy': 'same-origin',
+    'Cross-Origin-Resource-Policy': 'same-origin',
+  });
+  if (_req.path.startsWith('/api/')) {
+    res.set('Cache-Control', 'no-store');
+  }
+  next();
+});
 app.use(express.json({ limit: '3mb' }));
 
 let bootPromise = null;
@@ -28,6 +42,14 @@ function boot() {
         await seed();
         console.log('Database kosong — seed dijalankan otomatis.');
       }
+      await db.run(
+        `UPDATE password_resets SET used_at = datetime('now')
+         WHERE used_at IS NULL AND expires_at < datetime('now')`
+      );
+      await db.run(
+        `UPDATE food_listings SET status = 'expired'
+         WHERE status = 'available' AND expiry_at < datetime('now')`
+      );
       console.log(`Foto storage: ${storageMode()}`);
     })().catch((e) => {
       bootPromise = null;

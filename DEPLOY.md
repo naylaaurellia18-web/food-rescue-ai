@@ -40,35 +40,39 @@ turso db tokens create food-rescue-ai
 3. Import repo **`naylaaurellia18-web/food-rescue-ai`** → **Import**
 4. Di **Environment Variables** isi:
 
-   | Key | Value |
-   |-----|-------|
+   | Key | Nilai |
+   |-----|--------|
    | `TURSO_DATABASE_URL` | URL Turso dari langkah 1 |
    | `TURSO_AUTH_TOKEN` | Auth token Turso |
-   | `JWT_SECRET` | string acak panjang (bebas, mis. `rahasia-kuliah-2026-xxxx`) |
+   | `JWT_SECRET` | **wajib ≥32 karakter acak** — generate: `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` — app **gagal start** tanpa ini |
+   | `ADMIN_EMAIL` | email admin asli (saat DB kosong) |
+   | `ADMIN_PASSWORD` | sandi kuat ≥12 karakter (hanya saat DB kosong) |
 
-   **Notifikasi nyata (tanpa env tetap jalan mode simulasi):**
+   **Notifikasi & lupa sandi (tanpa env → mode simulasi / outbox):**
 
    | Key | Fungsi |
    |-----|--------|
    | `CALLMEBOT_APIKEY` | **WhatsApp (CallMeBot, gratis)** — lihat langkah di bawah |
-   | `SMTP_HOST` | `smtp.gmail.com` (Gmail) |
+   | `SMTP_HOST` | `smtp.gmail.com` (Gmail) — **wajib** agar kode *lupa sandi* benar-benar terkirim email |
    | `SMTP_PORT` | `587` |
-   | `SMTP_USER` | Email Gmail pengirim (mis. `naylaaurellia910@gmail.com`) |
+   | `SMTP_USER` | Email Gmail pengirim |
    | `SMTP_PASS` | **App Password** Gmail (16 digit, bukan password login) |
-   | `MAIL_FROM` | `Food Rescue AI <naylaaurellia910@gmail.com>` |
+   | `MAIL_FROM` | `Food Rescue AI <you@gmail.com>` |
    | `NOTIFY_EMAIL` | Semua email notifikasi dikirim ke kotak masuk ini |
-   | `WHATSAPP_API_URL` / `WHATSAPP_API_TOKEN` | Alternatif gateway WA lain (jika tidak pakai CallMeBot) |
+   | `WHATSAPP_API_URL` / `WHATSAPP_API_TOKEN` | Alternatif gateway WA lain (produksi: WhatsApp Business API) |
+   | `CLOUDINARY_URL` | Opsional — foto ke Cloudinary (tanpa ini: base64 di DB) |
 
 5. **Build & Deploy** → tunggu 1–2 menit
 6. Dapat URL: `https://food-rescue-ai-xxx.vercel.app` 🎉
 
-> **Pertama kali jalan:** app otomatis bikin tabel + isi data demo di Turso.
+> **Pertama kali jalan:** app auto-create tabel + seed **hanya admin** dari `ADMIN_EMAIL`/`ADMIN_PASSWORD`.  
+> Akun demo (`*@foodrescue.id`) **tidak** dibuat di produksi.
 
 ---
 
 ## 3. Verifikasi
 
-Buka URL Vercel → login `admin@foodrescue.id` / `admin123` → jalankan AI Matching.
+Buka URL Vercel → login dengan `ADMIN_EMAIL` / `ADMIN_PASSWORD` yang Anda set → jalankan AI Matching.
 
 Cek health: `https://-URL-KAMU-/api/health`  
 Harus: `{"status":"ok","db":"turso"}`
@@ -192,10 +196,13 @@ Saat registrasi/input, pilih lokasi dari dropdown (otomatis isi lat/lng):
 
 | Masalah | Solusi |
 |---------|--------|
-| 500 di Vercel | Cek Environment Variables (terutama `TURSO_*`) di Vercel → Settings → Environment Variables → Redeploy |
-| Tabel tidak ada | Hapus `TURSO_DATABASE_URL` → deploy ulang? Tidak — biarkan, app auto-create saat boot |
-| Reset data demo | Turso dashboard → SQL: `DELETE FROM users;` dll, atau biarkan — cukup buat user baru |
-| Foto terlalu besar | Limit upload 1 MB; foto disimpan base64 di kolom `photo_path` |
+| App crash start di Vercel | `JWT_SECRET` belum di-set / <32 char — isi di Environment Variables → Redeploy |
+| 500 di Vercel | Cek env `TURSO_*`, `ADMIN_EMAIL`/`ADMIN_PASSWORD` (DB kosong) |
+| Login admin tidak bisa | DB sudah terisi — akun demo tidak ada; pakai admin dari seed / reset Turso (OPSI B) + set `ADMIN_*` |
+| Lupa sandi tidak masuk email | Set `SMTP_*` — tanpa itu kode hanya muncul di **Pesan Terkirim** (outbox, butuh login admin) |
+| Tabel tidak ada | Biarkan — app auto-create saat boot |
+| Reset data demo | Turso dashboard → SQL, atau ikuti opsi di `server/reset-turso.sql` |
+| Foto terlalu besar | Limit upload 1 MB; opsional `CLOUDINARY_URL` |
 | Database lokal korup | Hapus `data/food_rescue.db*` lalu `npm start` (auto-seed) |
 
 ---

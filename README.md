@@ -39,6 +39,15 @@ Sebelum dipakai masyarakat (bukan cuma demo TA):
 | Kredensial demo disembunyikan | catatan `admin@…` hanya di `localhost` |
 | File legacy root dihapus | `index.html`/`login.html`/`js/` dll tidak lagi dipakai — SPA di `public/` |
 
+## Hardening Produksi (P2)
+
+| P2 | Status di kode |
+|----|----------------|
+| Security headers | `server/app.js` — `nosniff`, `X-Frame-Options: DENY`, referrer/permissions policy; `Cache-Control: no-store` untuk `/api/*` |
+| Auto-expire listing | boot: `available` lewat `expiry_at` → `expired`; kode reset kadaluarsa ditandai terpakai |
+| Panduan deploy aman | `DEPLOY.md` — `JWT_SECRET` kuat, `ADMIN_*`, SMTP untuk lupa sandi |
+| Kapasitas free tier | bagian di bawah — kapan perlu upgrade |
+
 **Env wajib di Vercel/Railway (`NODE_ENV=production` otomatis):**
 
 | Key | Nilai |
@@ -49,6 +58,25 @@ Sebelum dipakai masyarakat (bukan cuma demo TA):
 | `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` | dari app.turso.tech |
 
 **Jangan di produksi:** CallMeBot & Gmail App Password hanya untuk demo — ganti ke WhatsApp Business API / provider email resmi saat trafik nyata.
+
+## Kapasitas & Skala (free tier)
+
+| Layanan | Free tier (perkiraan) | Tanda perlu upgrade |
+|---------|----------------------|---------------------|
+| **Vercel** | Serverless, sleep dingin di Hobby-less; bandwidth & fungsi terbatas bulanan | Situs sering cold start lama / lewat kuota bulanan → Hobby/Pro |
+| **Railway** | Kuota jam-bulan kecil; service bisa stop saat habis | Build/deploy gagal “out of credits” → bayar plan kecil |
+| **Turso** | Database kecil (beberapa GB), kueri terbatas | DB > free quota / butuh replika → plan berbayar |
+| **SQLite lokal** | Hanya demo dev | Jangan dipakai di produksi multi-instance |
+
+**Saat mulai ramai (ratusan pengguna/hari):**
+
+1. Isi `CLOUDINARY_URL` — jangan simpan foto base64 di DB  
+2. Aktifkan `SMTP_*` resmi (bukan hanya simulasi outbox)  
+3. Ganti CallMeBot → **WhatsApp Business Cloud API** (`WHATSAPP_API_URL` + token resmi)  
+4. Backup Turso otomatis via Actions (`TURSO_*` secret)  
+5. Bila Vercel/Railway mulai limit → naikkan plan kecil, arsitektur kode tidak perlu diubah (stateless JWT)
+
+Rate limit in-memory per instance (`server/lib/ratelimit.js`) cukup untuk demo/trafik kecil; untuk multi-instance produksi pindahkan ke store terpusat (mis. Redis) bila diperlukan.
 
 ## Tech Stack
 
