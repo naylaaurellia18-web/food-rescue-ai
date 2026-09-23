@@ -649,14 +649,11 @@ function bindView() {
 /* ========== GIS MAP ========== */
 
 async function renderGisMap() {
-  const [users, listings, needs, matches] = await Promise.all([
-    api('/api/admin/users').catch(() => []),
-    api('/api/food').catch(() => []),
-    api('/api/needs').catch(() => []),
+  const [geo, matches] = await Promise.all([
+    api('/api/geo'),
     api('/api/matches').catch(() => []),
   ]);
-
-  const openNeeds = needs.filter((n) => n.status === 'open');
+  const users = geo.users || [];
   const activeMatches = matches.filter((m) => !['cancelled'].includes(m.status));
 
   return `
@@ -705,11 +702,12 @@ function initGisMap() {
 async function loadMapData() {
   if (!gisMap || !gisLayer) return;
 
-  const [users, listings, matches] = await Promise.all([
-    api('/api/admin/users').catch(() => []),
-    api('/api/food').catch(() => []),
+  const [geo, matches] = await Promise.all([
+    api('/api/geo'),
     api('/api/matches').catch(() => []),
   ]);
+  const users = geo.users || [];
+  const listings = geo.listings || [];
 
   gisLayer.clearLayers();
 

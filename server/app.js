@@ -10,6 +10,7 @@ const needRoutes = require('./routes/needs');
 const { router: matchingRoutes } = require('./routes/matching');
 const deliveryRoutes = require('./routes/deliveries');
 const notificationRoutes = require('./routes/notifications');
+const geoRoutes = require('./routes/geo');
 const adminRoutes = require('./routes/admin');
 
 const app = express();
@@ -48,6 +49,7 @@ app.use('/api/needs', needRoutes);
 app.use('/api/matches', matchingRoutes);
 app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/geo', geoRoutes);
 app.use('/api/admin', adminRoutes);
 
 app.get('/api/health', (_req, res) =>

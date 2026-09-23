@@ -1,4 +1,4 @@
-const CACHE = 'frai-v1';
+const CACHE = 'frai-v2';
 const PRECACHE = [
   '/',
   '/index.html',
