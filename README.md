@@ -4,6 +4,17 @@ Platform redistribusi surplus makanan berbasis **AI Matching & GIS** — menghub
 
 Dibangun untuk tugas kuliah sesuai dokumen SKPL (10 FR + 8 NFR).
 
+## Tautan Produksi
+
+| Yang dituju | Tautan |
+|---|---|
+| Repositori Publik (GitHub) | https://github.com/naylaaurellia18-web/food-rescue-ai |
+| Frontend Produksi (Vercel) | https://food-rescue-ai-blond.vercel.app |
+| Backend REST / API (health) | https://food-rescue-ai-blond.vercel.app/api/health |
+| Riwayat Pipeline CI/CD (GitHub Actions) | https://github.com/naylaaurellia18-web/food-rescue-ai/actions |
+
+> **Railway (backend terpisah):** impor repo di [railway.app](https://railway.app) → service `food-rescue-ai` memakai `railway.json` (start `node server/index.js`, health `/api/health`). Setelah deploy, URL-nya `https://<project>.up.railway.app`. Agar auto-deploy dari Actions: tambah secret `RAILWAY_TOKEN` di repo → Settings → Secrets and variables → Actions.
+
 ## Tech Stack
 
 | Layer | Teknologi |
