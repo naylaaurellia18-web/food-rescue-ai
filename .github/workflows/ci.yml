@@ -21,20 +21,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Start server
+      - name: E2E test + audit tab
         run: |
-          node server/index.js &
+          set -e
+          nohup node server/index.js > server.log 2>&1 &
+          echo $! > server.pid
+          ok=0
           for i in $(seq 1 30); do
-            curl -fsS http://localhost:3000/api/health && break
-            if [ "$i" -eq 30 ]; then echo "Server tidak sehat" >&2; exit 1; fi
+            if curl -fsS http://localhost:3000/api/health; then ok=1; break; fi
             sleep 1
           done
-
-      - name: E2E test
-        run: node e2e-test.js
-
-      - name: Audit endpoint semua tab
-        run: node tab-audit.js
+          if [ "$ok" -ne 1 ]; then
+            echo "Server tidak sehat:"; cat server.log
+            exit 1
+          fi
+          node e2e-test.js
+          node tab-audit.js
+          kill "$(cat server.pid)" || true
 
   deploy-railway:
     name: Deploy Backend ke Railway
@@ -54,7 +57,7 @@ jobs:
         if: env.RAILWAY_TOKEN != ''
         run: |
           npm install -g @railway/cli
-          railway up --detach
+          railway up --service food-rescue-ai --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
