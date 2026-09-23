@@ -3,6 +3,7 @@ const path = require('node:path');
 
 const db = require('./db');
 const { seed } = require('./seed');
+const { storageMode } = require('./lib/storage');
 
 const authRoutes = require('./routes/auth');
 const foodRoutes = require('./routes/food');
@@ -24,8 +25,9 @@ function boot() {
       const userCount = (await db.get('SELECT COUNT(*) AS c FROM users'))?.c ?? 0;
       if (userCount === 0) {
         await seed();
-        console.log('Database kosong — seed data demo dijalankan otomatis.');
+        console.log('Database kosong — seed dijalankan otomatis.');
       }
+      console.log(`Foto storage: ${storageMode()}`);
     })().catch((e) => {
       bootPromise = null;
       throw e;
@@ -61,8 +63,16 @@ app.get(/^\/(?!api|uploads).*/, (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
-app.use((err, _req, res, _next) => {
-  console.error(err);
+app.use((err, req, res, _next) => {
+  const payload = {
+    ts: new Date().toISOString(),
+    level: 'error',
+    method: req.method,
+    path: req.originalUrl,
+    status: err.status || 500,
+    message: err.message || 'Terjadi kesalahan server',
+  };
+  console.error(JSON.stringify(payload));
   res.status(err.status || 500).json({ error: err.message || 'Terjadi kesalahan server' });
 });
 

@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const db = require('../db');
 const { audit } = require('../lib/audit');
+const { saveImage } = require('../lib/storage');
 const { authenticate, requireRole, requireActive } = require('../middleware');
 
 const router = express.Router();
@@ -14,11 +15,6 @@ const upload = multer({
     else cb(new Error('Hanya file gambar yang diizinkan'));
   },
 });
-
-function fileToDataUri(file) {
-  if (!file) return null;
-  return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-}
 
 router.use(authenticate, requireRole('donor', 'admin'), requireActive);
 
@@ -45,7 +41,7 @@ router.post('/', upload.single('photo'), async (req, res, next) => {
         ftype,
         Number(portions),
         expiry_at,
-        fileToDataUri(req.file),
+        await saveImage(req.file),
         lat != null && lat !== '' && !Number.isNaN(Number(lat)) ? Number(lat) : donor?.lat ?? null,
         lng != null && lng !== '' && !Number.isNaN(Number(lng)) ? Number(lng) : donor?.lng ?? null,
       ]

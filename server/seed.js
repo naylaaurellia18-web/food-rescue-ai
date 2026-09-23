@@ -1,5 +1,5 @@
 const db = require('./db');
-const { hashPassword } = require('./lib/auth');
+const { hashPassword, isProduction, generateSecret } = require('./lib/auth');
 const { audit } = require('./lib/audit');
 
 const AUDIT_TRIGGERS = `
@@ -17,7 +17,7 @@ const AUDIT_TRIGGERS = `
 
 const REAL_PHONE = '083847721511';
 
-// Lokasi = daftar yang sama dengan dropdown & marker peta (hanya Madiun)
+// Hanya untuk lokal / demo — TIDAK pernah dibuat di produksi
 const DEMO_USERS = [
   ['Hotel Merdeka Madiun', 'donor@foodrescue.id', 'donor123', 'donor', 'active', REAL_PHONE, 'Kota Madiun', -7.6245, 111.525, 'Hotel Merdeka Madiun', null],
   ['Rumah Makan Padang Madiun', 'donor2@foodrescue.id', 'donor123', 'donor', 'active', REAL_PHONE, 'Kartoharjo', -7.6014, 111.4844, 'RM Padang Madiun', null],
@@ -28,10 +28,26 @@ const DEMO_USERS = [
   ['Menunggu Verifikasi', 'pending@foodrescue.id', 'pending123', 'donor', 'pending', REAL_PHONE, 'Kota Madiun', null, null, 'Cafe Uji Coba Madiun', null],
 ];
 
+function productionAdmin() {
+  const email = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  const password = process.env.ADMIN_PASSWORD || '';
+  const name = process.env.ADMIN_NAME || 'Admin Food Rescue';
+  if (!email || !password) {
+    throw new Error(
+      'Database kosong di produksi. Set ADMIN_EMAIL dan ADMIN_PASSWORD di Environment Variables ' +
+        '(wajib, password minimal 12 karakter) lalu deploy ulang.'
+    );
+  }
+  if (password.length < 12) {
+    throw new Error('ADMIN_PASSWORD di produksi minimal 12 karakter.');
+  }
+  return { name, email, password };
+}
+
 async function wipeTransactional({ keepUsers = false } = {}) {
   await db.exec(`
     DROP TRIGGER IF EXISTS audit_logs_no_update;
-    DROP TRIGGER IF EXISTS audit_logs_no_delete;
+    DROP TRIGGER IF NOT EXISTS audit_logs_no_delete;
     DELETE FROM otp_codes;
     DELETE FROM notifications;
     DELETE FROM message_outbox;
@@ -55,11 +71,13 @@ async function wipeTransactional({ keepUsers = false } = {}) {
 
 /**
  * Seed default: HANYA admin (web fresh).
- * Lokasi: Kota Madiun, Jawa Timur.
  *
- * --force --full      : reset total + akun demo + listing/kebutuhan
- * --force --accounts  : reset total + HANYA akun login (tanpa listing/match) — data bersih
- * --clean             : hapus data transaksi (listing, need, match, notif, audit) — akun tetap
+ * Produksi: admin dari ADMIN_EMAIL/ADMIN_PASSWORD — akun demo TIDAK dibuat.
+ * Lokal: admin demo + opsional akun demo (--accounts / --full).
+ *
+ * --force --full      : reset total + akun demo + listing/kebutuhan (lokal)
+ * --force --accounts  : reset total + akun login (lokal)
+ * --clean             : hapus data transaksi, akun tetap
  */
 async function seed({ force = false, full = false, clean = false, accounts = false } = {}) {
   await db.init();
@@ -73,34 +91,66 @@ async function seed({ force = false, full = false, clean = false, accounts = fal
 
   const existing = (await db.get('SELECT COUNT(*) AS c FROM users'))?.c ?? 0;
   const wantAccountsOnly = accounts || (!full && force);
+  const prod = isProduction();
 
   if (existing > 0) {
     if (!force) {
       console.log('Database sudah berisi data. Pakai --force --accounts (akun saja) atau --clean (hapus data, akun tetap).');
       return { skipped: true };
     }
+    if (prod && !process.env.ALLOW_FORCE_SEED_PRODUCTION) {
+      throw new Error(
+        'Seed --force di produksi diblokir. Set ALLOW_FORCE_SEED_PRODUCTION=1 hanya bila yakin (akan hapus semua user).'
+      );
+    }
     await wipeTransactional({ keepUsers: false });
   }
 
-  await db.run(
-    `INSERT INTO users (name, email, password_hash, role, status, phone, address, lat, lng, org_name, capacity)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      'Admin Sistem',
-      'admin@foodrescue.id',
-      hashPassword('admin123'),
-      'admin',
-      'active',
-      REAL_PHONE,
-      'Kota Madiun',
-      -7.6245,
-      111.525,
-      'Food Rescue AI',
-      null,
-    ]
-  );
+  const allowDemo = !prod || process.env.ALLOW_DEMO_ACCOUNTS === '1';
 
-  const seedAccounts = full || wantAccountsOnly;
+  if (prod) {
+    const admin = productionAdmin();
+    await db.run(
+      `INSERT INTO users (name, email, password_hash, role, status, phone, address, lat, lng, org_name, capacity)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        admin.name,
+        admin.email,
+        hashPassword(admin.password),
+        'admin',
+        'active',
+        null,
+        null,
+        null,
+        null,
+        'Food Rescue AI',
+        null,
+      ]
+    );
+    console.log(`Seed produksi: admin ${admin.email} (dari env ADMIN_EMAIL).`);
+    console.log('Akun demo TIDAK dibuat di produksi.');
+  } else {
+    await db.run(
+      `INSERT INTO users (name, email, password_hash, role, status, phone, address, lat, lng, org_name, capacity)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        'Admin Sistem',
+        'admin@foodrescue.id',
+        hashPassword('admin123'),
+        'admin',
+        'active',
+        REAL_PHONE,
+        'Kota Madiun',
+        -7.6245,
+        111.525,
+        'Food Rescue AI',
+        null,
+      ]
+    );
+    console.log('Seed lokal: admin@foodrescue.id / admin123');
+  }
+
+  const seedAccounts = allowDemo && (full || wantAccountsOnly);
   if (seedAccounts) {
     for (const u of DEMO_USERS) {
       await db.run(
@@ -111,7 +161,7 @@ async function seed({ force = false, full = false, clean = false, accounts = fal
     }
   }
 
-  if (full) {
+  if (full && allowDemo) {
     const inHours = (h) => new Date(Date.now() + h * 3600000).toISOString();
     const listings = [
       [2, 'Buffet Sarapan Sisa', 'Nasi, lauk pauk — masih layak konsumsi', 'wet', 40, inHours(3), -7.6245, 111.525, 'available'],
@@ -143,22 +193,21 @@ async function seed({ force = false, full = false, clean = false, accounts = fal
     }
   }
 
-  await audit(1, 'SEED_DATABASE', 'system', null, {
-    mode: full ? 'full-demo' : wantAccountsOnly ? 'accounts-only' : 'fresh-admin-only',
+  await audit(null, 'SEED_DATABASE', 'system', null, {
+    mode: prod ? 'production-admin' : full ? 'full-demo' : wantAccountsOnly ? 'accounts-only' : 'fresh-admin-only',
   });
 
-  if (full) {
+  if (prod) {
+    console.log('Seed produksi selesai.');
+  } else if (full) {
     console.log('Seed demo lengkap selesai (akun + listing + kebutuhan).');
   } else if (wantAccountsOnly) {
     console.log('Seed akun login saja — listing/match kosong (siap diisi dari nol).');
-  } else {
-    console.log('Seed fresh: hanya admin, data transaksi kosong.');
-  }
-  console.log('  admin@foodrescue.id / admin123');
-  if (seedAccounts) {
     console.log('  donor@foodrescue.id / donor123');
     console.log('  penerima@foodrescue.id / penerima123');
     console.log('  kurir@foodrescue.id / kurir123');
+  } else {
+    console.log('Seed fresh: hanya admin, data transaksi kosong.');
   }
   return { ok: true };
 }
@@ -173,7 +222,7 @@ if (require.main === module) {
   seed({ force, full, clean, accounts })
     .then(() => process.exit(0))
     .catch((e) => {
-      console.error(e);
+      console.error(e.message || e);
       process.exit(1);
     });
 }

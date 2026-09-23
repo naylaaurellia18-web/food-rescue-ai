@@ -3,6 +3,7 @@ const multer = require('multer');
 const db = require('../db');
 const { generateOtp } = require('../lib/auth');
 const { audit, notify } = require('../lib/audit');
+const { saveImage } = require('../lib/storage');
 const { authenticate, requireRole, requireActive } = require('../middleware');
 
 const router = express.Router();
@@ -44,7 +45,7 @@ router.post('/:id/pickup', upload.single('photo'), requireRole('courier', 'admin
     }
     if (!req.file) return res.status(400).json({ error: 'Foto kondisi makanan wajib diunggah' });
 
-    const photoUri = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    const photoUri = await saveImage(req.file);
 
     await db.run(
       `UPDATE matches SET status = 'picked_up', photo_path = ?, updated_at = datetime('now') WHERE id = ?`,

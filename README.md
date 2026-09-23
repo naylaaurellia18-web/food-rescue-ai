@@ -15,6 +15,30 @@ Dibangun untuk tugas kuliah sesuai dokumen SKPL (10 FR + 8 NFR).
 
 > **Railway (backend terpisah):** impor repo di [railway.app](https://railway.app) → service `food-rescue-ai` memakai `railway.json` (start `node server/index.js`, health `/api/health`). Setelah deploy, URL-nya `https://<project>.up.railway.app`. Agar auto-deploy dari Actions: tambah secret `RAILWAY_TOKEN` di repo → Settings → Secrets and variables → Actions.
 
+## Hardening Produksi (P0)
+
+Sebelum dipakai masyarakat (bukan cuma demo TA):
+
+| P0 | Status di kode |
+|----|----------------|
+| JWT_SECRET wajib kuat di produksi | `server/lib/auth.js` — app **gagal start** bila `NODE_ENV=production` tanpa secret ≥32 char |
+| Tanpa akun demo di produksi | `server/seed.js` — admin dari `ADMIN_EMAIL` / `ADMIN_PASSWORD`; akun `*@foodrescue.id` **tidak** dibuat di produksi |
+| Foto tidak membesar DB | `server/lib/storage.js` — isi `CLOUDINARY_URL` → upload eksternal; tanpa env → base64 (demo) |
+| Backup DB | `node scripts/backup-db.js` + Actions harian (butuh secret `TURSO_*`) |
+| Uptime monitor | Actions tiap 15 menit → `GET /api/health` di Vercel |
+| Error log terstruktur | middleware error JSON (method/path/status/message) |
+
+**Env wajib di Vercel/Railway (`NODE_ENV=production` otomatis):**
+
+| Key | Nilai |
+|-----|--------|
+| `JWT_SECRET` | `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
+| `ADMIN_EMAIL` | email admin asli |
+| `ADMIN_PASSWORD` | sandi kuat ≥12 karakter (hanya dipakai saat DB masih kosong) |
+| `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` | dari app.turso.tech |
+
+**Jangan di produksi:** CallMeBot & Gmail App Password hanya untuk demo — ganti ke WhatsApp Business API / provider email resmi saat trafik nyata.
+
 ## Tech Stack
 
 | Layer | Teknologi |

@@ -1,0 +1,52 @@
+name: Uptime & Backup
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  healthcheck:
+    name: Cek /api/health produksi
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Vercel
+        run: |
+          URL="${{ vars.PRODUCTION_URL || 'https://food-rescue-ai-blond.vercel.app' }}"
+          echo "GET $URL/api/health"
+          code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --max-time 30 "$URL/api/health" || echo 000)
+          cat /tmp/health.json || true
+          echo
+          if [ "$code" != "200" ]; then
+            echo "::error::Healthcheck gagal HTTP $code"
+            exit 1
+          fi
+
+  backup-db:
+    name: Backup harian database
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '17 2 * * *' || github.event_name == 'workflow_dispatch'
+    env:
+      TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+      TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Dump database
+        if: env.TURSO_DATABASE_URL != ''
+        run: node scripts/backup-db.js
+      - name: Simpan artifact
+        if: env.TURSO_DATABASE_URL != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup
+          path: backups/
+          retention-days: 14
+      - name: Belum ada secret Turso
+        if: env.TURSO_DATABASE_URL == ''
+        run: echo "::notice::Tambahkan secrets TURSO_DATABASE_URL & TURSO_AUTH_TOKEN agar backup harian aktif."
