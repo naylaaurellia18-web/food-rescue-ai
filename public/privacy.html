@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kebijakan Privasi — Food Rescue AI</title>
+  <meta name="description" content="Kebijakan privasi Food Rescue AI sesuai UU No. 27 Tahun 2022 (UU PDP)." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; background: var(--bg, #f4f6f8); color: var(--text, #0f172a); }
+    .legal-wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 48px; }
+    .legal-card { background: var(--surface, #fff); border-radius: 14px; padding: 28px 28px 32px; border: 1px solid var(--line, #e2e8f0); box-shadow: var(--shadow-md, 0 1px 2px rgba(15,23,42,.05)); }
+    h1 { font-size: 26px; letter-spacing: -0.03em; margin-bottom: 6px; }
+    .meta { color: var(--muted, #64748b); font-size: 13px; margin-bottom: 22px; }
+    h2 { font-size: 16px; margin: 22px 0 8px; }
+    p, li { font-size: 14.5px; line-height: 1.65; color: var(--label, #334155); }
+    ul { padding-left: 1.2em; margin: 6px 0 10px; }
+    .back { display: inline-block; margin-bottom: 18px; font-size: 14px; font-weight: 600; color: var(--brand-strong, #047857); text-decoration: none; }
+    .back:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="legal-wrap">
+    <a class="back" href="/">← Kembali ke aplikasi</a>
+    <div class="legal-card">
+      <h1>Kebijakan Privasi</h1>
+      <p class="meta">Food Rescue AI · Berlaku sejak 2026 · Sesuai UU No. 27 Tahun 2022 tentang Pelindungan Data Pribadi (UU PDP)</p>
+
+      <h2>1. Data yang kami kumpulkan</h2>
+      <ul>
+        <li>Akun: nama, email, kata sandi (disimpan ter-hash dengan bcrypt), peran, status verifikasi</li>
+        <li>Opsional: nomor telepon, alamat, koordinat lokasi (lat/lng), nama organisasi, kapasitas kurir</li>
+        <li>Aktivitas: listing surplus, kebutuhan pangan, pencocokan, status pengantaran, log audit</li>
+        <li>Teknis: log error terstruktur (method, path, status) untuk keamanan layanan</li>
+      </ul>
+
+      <h2>2. Tujuan penggunaan</h2>
+      <ul>
+        <li>Menghubungkan donor, penerima manfaat, dan kurir untuk redistribusi pangan</li>
+        <li>Autentikasi, verifikasi akun, notifikasi pengantaran (in-app / WhatsApp / email bila diaktifkan)</li>
+        <li>Keamanan, audit, dan peningkatan layanan</li>
+      </ul>
+
+      <h2>3. Dasar &amp; batas pemrosesan</h2>
+      <p>Kami hanya memproses data yang diperlukan untuk tujuan layanan. Data tidak dijual, disewakan, atau dipakai untuk iklan pihak ketiga. Koordinat digunakan untuk perhitungan rute dan ditampilkan sebagai bagian dari fitur peta operasional.</p>
+
+      <h2>4. Pihak ketiga (opsional)</h2>
+      <p>Jika Anda mengaktifkan notifikasi eksternal, data terbatas (nomor WhatsApp / email tujuan, isi pesan status) dikirim ke penyedia gateway yang Anda setujui (mis. CallMeBot, SMTP). Tanpa konfigurasi tersebut, notifikasi hanya tersimpan di aplikasi (outbox simulasi).</p>
+
+      <h2>5. Penyimpanan &amp; keamanan</h2>
+      <ul>
+        <li>Kata sandi tidak pernah disimpan dalam bentuk asli</li>
+        <li>Token sesi (JWT) kedaluwarsa otomatis</li>
+        <li>Database dienkripsi/diakses sesuai penyedia hosting (mis. Turso) dengan token autentikasi</li>
+        <li>Backup database dilakukan berkala oleh pengelola</li>
+      </ul>
+
+      <h2>6. Hak Anda (sesuai UU PDP)</h2>
+      <ul>
+        <li>Memperoleh informasi pemrosesan data pribadi Anda</li>
+        <li>Memperbaiki atau memperbarui data yang tidak akurat</li>
+        <li>Menghapus data / menarik persetujuan (hubungi admin) — berlaku untuk data yang tidak wajib disimpan demi audit/hukum</li>
+        <li>Mengajukan keberatan atas pemrosesan</li>
+      </ul>
+
+      <h2>7. Retensi</h2>
+      <p>Data akun dan log audit diselama layanan berjalan. Saat penghapusan diminta, data non-operasional dihapus atau dianonimkan; sebagian catatan audit dapat tetap disimpan dalam bentuk minimal untuk integritas sistem.</p>
+
+      <h2>8. Kontak</h2>
+      <p>Pertanyaan privasi &amp; permintaan data: hubungi admin platform melalui email yang tercantum pada repositori proyek: <a href="https://github.com/naylaaurellia18-web/food-rescue-ai">github.com/naylaaurellia18-web/food-rescue-ai</a>.</p>
+
+      <h2>9. Perubahan</h2>
+      <p>Pembaruan kebijakan akan ditayangkan di halaman ini dengan tanggal berlaku yang diperbarui.</p>
+    </div>
+  </div>
+</body>
+</html>

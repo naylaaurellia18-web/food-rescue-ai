@@ -111,6 +111,14 @@ const SCHEMA_STATEMENTS = [
     provider_ref TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`,
+  `CREATE TABLE IF NOT EXISTS password_resets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    code TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
 ];
 
 const cloudUrl = process.env.TURSO_DATABASE_URL || process.env.LIBSQL_DATABASE_URL || null;

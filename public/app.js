@@ -779,7 +779,14 @@ async function loadMapData() {
 
 /* ========== AUTH ========== */
 
+function isLocalHost() {
+  return ['localhost', '127.0.0.1', ''].includes(location.hostname);
+}
+
 function renderAuth() {
+  const demoNote = isLocalHost()
+    ? `<div class="demo-note">Coba langsung — Admin: <b>admin@foodrescue.id</b> / <b>admin123</b></div>`
+    : '';
   return `
   <div class="auth-wrap">
     <aside class="auth-aside">
@@ -814,8 +821,11 @@ function renderAuth() {
           <input name="email" type="email" required placeholder="nama@contoh.id" autocomplete="email" />
           <label>Kata Sandi</label>
           <input name="password" type="password" required placeholder="••••••••" autocomplete="current-password" />
-          <button class="btn btn-block" type="submit">${icon('arrowRight', 15)} Masuk</button>
-          <div class="demo-note">Coba langsung — Admin: <b>admin@foodrescue.id</b> / <b>admin123</b></div>
+          <div class="login-row">
+            <button class="btn btn-block" type="submit">${icon('arrowRight', 15)} Masuk</button>
+            <button class="link-btn" type="button" id="btnForgot">Lupa kata sandi?</button>
+          </div>
+          ${demoNote}
         </form>
         <form id="formReg" hidden data-action="1" data-endpoint="/api/auth/register">
           <label>Nama / Nama Organisasi</label>
@@ -860,6 +870,28 @@ function renderAuth() {
           <button class="btn btn-block" type="submit">Daftar sekarang</button>
           <p class="reg-note">Akun Anda perlu diverifikasi admin dulu sebelum bisa masuk — biasanya cepat.</p>
         </form>
+        <form id="formForgot" hidden>
+          <label>Email terdaftar</label>
+          <input name="email" type="email" required placeholder="nama@contoh.id" autocomplete="email" />
+          <button class="btn btn-block" type="submit">Kirim kode reset</button>
+          <p class="reg-note">Kode 6 digit berlaku 15 menit, dikirim ke email Anda.</p>
+          <button class="link-btn back-login" type="button" id="btnBackLogin">← Kembali ke masuk</button>
+        </form>
+        <form id="formReset" hidden>
+          <label>Email</label>
+          <input name="email" type="email" required autocomplete="email" />
+          <label>Kode reset (6 digit)</label>
+          <input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required placeholder="123456" autocomplete="one-time-code" />
+          <label>Kata sandi baru</label>
+          <input name="password" type="password" minlength="6" required autocomplete="new-password" placeholder="minimal 6 karakter" />
+          <button class="btn btn-block" type="submit">Simpan sandi baru</button>
+          <button class="link-btn back-login" type="button" id="btnBackLogin2">← Kembali ke masuk</button>
+        </form>
+        <div class="auth-legal">
+          <a href="/privacy.html">Kebijakan Privasi</a>
+          <span>·</span>
+          <a href="/syarat.html">Syarat &amp; Ketentuan</a>
+        </div>
       </div>
     </div>
   </div>`;
@@ -870,19 +902,23 @@ function bindAuth() {
   const tabReg = document.getElementById('tabReg');
   const formLogin = document.getElementById('formLogin');
   const formReg = document.getElementById('formReg');
+  const formForgot = document.getElementById('formForgot');
+  const formReset = document.getElementById('formReset');
 
-  tabLogin.onclick = () => {
-    tabLogin.classList.add('active');
-    tabReg.classList.remove('active');
-    formLogin.hidden = false;
-    formReg.hidden = true;
-  };
-  tabReg.onclick = () => {
-    tabReg.classList.add('active');
-    tabLogin.classList.remove('active');
-    formReg.hidden = false;
-    formLogin.hidden = true;
-  };
+  function showPanel(which) {
+    const map = { login: formLogin, reg: formReg, forgot: formForgot, reset: formReset };
+    Object.values(map).forEach((f) => { if (f) f.hidden = true; });
+    if (map[which]) map[which].hidden = false;
+    document.querySelector('.auth-tabs').hidden = which === 'forgot' || which === 'reset';
+    tabLogin.classList.toggle('active', which === 'login');
+    tabReg.classList.toggle('active', which === 'reg');
+  }
+
+  tabLogin.onclick = () => showPanel('login');
+  tabReg.onclick = () => showPanel('reg');
+  document.getElementById('btnForgot')?.addEventListener('click', () => showPanel('forgot'));
+  document.getElementById('btnBackLogin')?.addEventListener('click', () => showPanel('login'));
+  document.getElementById('btnBackLogin2')?.addEventListener('click', () => showPanel('login'));
 
   formLogin.addEventListener('submit', async (ev) => {
     ev.preventDefault();
@@ -916,6 +952,37 @@ function bindAuth() {
       const res = await api('/api/auth/register', { method: 'POST', body });
       toast(res.message);
       showRegSuccess(body.email);
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  });
+
+  formForgot?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const email = new FormData(formForgot).get('email');
+    try {
+      const res = await api('/api/auth/forgot-password', { method: 'POST', body: { email } });
+      toast(res.message);
+      const emailInput = formReset?.querySelector('input[name="email"]');
+      if (emailInput) emailInput.value = email;
+      showPanel('reset');
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  });
+
+  formReset?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const fd = new FormData(formReset);
+    try {
+      const res = await api('/api/auth/reset-password', {
+        method: 'POST',
+        body: { email: fd.get('email'), code: fd.get('code'), password: fd.get('password') },
+      });
+      toast(res.message);
+      const loginEmail = formLogin?.querySelector('input[name="email"]');
+      if (loginEmail) loginEmail.value = fd.get('email');
+      showPanel('login');
     } catch (e) {
       toast(e.message, 'error');
     }

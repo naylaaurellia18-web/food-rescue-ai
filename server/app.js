@@ -15,6 +15,7 @@ const geoRoutes = require('./routes/geo');
 const adminRoutes = require('./routes/admin');
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '3mb' }));
 
 let bootPromise = null;
@@ -60,7 +61,8 @@ app.get('/api/health', (_req, res) =>
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.get(/^\/(?!api|uploads).*/, (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+  const page = path.join(__dirname, '..', 'public', 'index.html');
+  res.sendFile(page);
 });
 
 app.use((err, req, res, _next) => {

@@ -49,6 +49,7 @@ async function wipeTransactional({ keepUsers = false } = {}) {
     DROP TRIGGER IF EXISTS audit_logs_no_update;
     DROP TRIGGER IF NOT EXISTS audit_logs_no_delete;
     DELETE FROM otp_codes;
+    DELETE FROM password_resets;
     DELETE FROM notifications;
     DELETE FROM message_outbox;
     DELETE FROM audit_logs;

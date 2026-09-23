@@ -148,6 +148,50 @@ async function login(email, password) {
   const imm = await fetch(`${base}/api/admin/logs`).then((r) => r.status);
   console.log('✓ RBAC: /api/admin/logs tanpa token ->', imm);
 
+  const reg2 = await api('/api/auth/register', {
+    method: 'POST',
+    body: { name: 'Tes Reset', email: `reset${Date.now()}@x.id`, password: 'lama123', role: 'donor' },
+  });
+  const pending2 = (await api('/api/admin/users', { token: admin })).find(
+    (u) => u.status === 'pending' && u.email.startsWith('reset')
+  );
+  if (pending2) {
+    await api(`/api/admin/users/${pending2.id}/status`, {
+      method: 'PATCH',
+      token: admin,
+      body: { status: 'active' },
+    });
+  }
+  await api('/api/auth/forgot-password', { method: 'POST', body: { email: pending2.email } });
+  await new Promise((r) => setTimeout(r, 300));
+  const out2 = await api('/api/admin/outbox', { token: admin });
+  const resetMsg = out2.messages.find(
+    (m) => m.channel === 'email' && m.subject && m.subject.includes('Reset') && m.body.match(/\b\d{6}\b/)
+  );
+  if (!resetMsg) throw new Error('Kode reset tidak ada di outbox');
+  const resetCode = resetMsg.body.match(/\b(\d{6})\b/)[1];
+  await api('/api/auth/reset-password', {
+    method: 'POST',
+    body: { email: pending2.email, code: resetCode, password: 'baru456' },
+  });
+  await login(pending2.email, 'baru456');
+  console.log('✓ Lupa sandi: kode dari outbox → reset → login sandi baru OK');
+
+  const rlEmail = `rl${Date.now()}@x.id`;
+  let rateLimited = false;
+  for (let i = 0; i < 6; i++) {
+    try {
+      await api('/api/auth/login', { method: 'POST', body: { email: rlEmail, password: 'salah' } });
+    } catch (e) {
+      if (String(e.message).includes('429')) {
+        rateLimited = true;
+        break;
+      }
+    }
+  }
+  if (!rateLimited) throw new Error('Rate limit login tidak aktif');
+  console.log('✓ Rate limit login: setelah 5 gagal → 429');
+
   console.log('\n=== SEMUA UJI E2E LULUS ===');
 })().catch((e) => {
   console.error('GAGAL:', e.message);

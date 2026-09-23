@@ -28,6 +28,17 @@ Sebelum dipakai masyarakat (bukan cuma demo TA):
 | Uptime monitor | Actions tiap 15 menit → `GET /api/health` di Vercel |
 | Error log terstruktur | middleware error JSON (method/path/status/message) |
 
+## Hardening Produksi (P1)
+
+| P1 | Status di kode |
+|----|----------------|
+| Lupa sandi | `POST /api/auth/forgot-password` + `/reset-password` — kode 6 digit, 15 menit, sekali pakai; email via SMTP (simulasi → outbox) |
+| Rate limit login | 5 gagal / 15 menit per IP+email → **429** (`server/lib/ratelimit.js`) |
+| Rate limit reset | 5 permintaan / jam per IP+email |
+| Halaman legal (UU PDP) | `/privacy.html` + `/syarat.html`, tautan di layar auth |
+| Kredensial demo disembunyikan | catatan `admin@…` hanya di `localhost` |
+| File legacy root dihapus | `index.html`/`login.html`/`js/` dll tidak lagi dipakai — SPA di `public/` |
+
 **Env wajib di Vercel/Railway (`NODE_ENV=production` otomatis):**
 
 | Key | Nilai |
