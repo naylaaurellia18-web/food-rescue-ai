@@ -17,6 +17,7 @@ const TABLES = [
   'food_needs',
   'matches',
   'otp_codes',
+  'password_resets',
   'notifications',
   'message_outbox',
   'audit_logs',
